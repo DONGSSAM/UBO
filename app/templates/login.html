@@ -1,0 +1,162 @@
+<!DOCTYPE html> 
+<html lang="en">  
+  
+<head>  
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload stylesheet" as="style" href='https://fonts.googleapis.com/css2?family=Gothic+A1:wght@200&family=Nanum+Gothic&family=Nanum+Myeongjo&family=Noto+Sans+KR:wght@400&family=Roboto:wght@100&display=swap'>    
+    <title>우보 로그인</title>
+    <style>/*헤드의 스타일은 사용할 요소들의 스타일만 지정함 컨테이너박스 안에서 추가된다면 어디서 추가될지 이미지로만 설정함 스크립트와 호환은 x 폰트나 위치, 에니메이션 정도로만 설정 나중에 js에서 기능 추가할 때 고려해서 none정도만 단순 디자인만 설정함*/
+        @import url('https://fonts.googleapis.com/css?family=Lato:400,700');
+        @import url('https://fonts.googleapis.com/css?family=Do+Hyeon:400');
+
+        @font-face {
+            font-family: 'NanumGothic';
+            font-style: normal;
+            src: url("/fonts/Nanum_Gothic/NanumGothic-Regular.ttf");
+        }
+
+        *,
+        *:before, 
+        *:after {
+            box-sizing: border-box;/*모든 요소를 width height로 너비, 높이 패딩, 보더 자동으로 설정해줌*/
+        }
+        
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 300px;
+    }
+    .login-box h2 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .login-box input[type="text"],
+    .login-box input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .login-box button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .login-box button:hover {
+      background: #0056b3;
+    }
+  .signup-button {
+    display: inline-block;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+  .signup-button:hover {
+    background-color: #0056b3;
+  }
+    #modal {
+      font-family: 'NanumGothic';
+      display: none;
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 20px;
+      box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+      z-index: 1000;
+	  border-radius: 5px;
+    }
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+	#error-message {
+      font-family: 'NanumGothic';
+	  border-radius: 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+	}
+	#closeModalButton {
+	display: inline-block;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    margin-top: 20px;
+	border: none;
+	}
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>우리반 보약 로그인</h2>
+	<form id="loginForm" method="post" action="/login">
+  	<input type="text" name="username" placeholder="아이디">
+  	<input type="password" name="password" placeholder="비밀번호">
+  	<button type="submit">로그인</button>
+	</form>
+    <a href="/signup" class="signup-button">회원가입</a>
+  </div>
+  <div id="overlay"></div>
+  <div id="modal">
+    <p id="error-message">아이디 또는 비밀번호가 틀렸습니다.</p>
+    <button id="closeModalButton" onclick="closeModal()">다시 로그인</button>
+  </div>
+  <script>
+    function login() {
+	  document.addEventListener('keyup', function(event) {
+  	  if (event.key === 'Enter') {
+        document.querySelector('form').submit(); // ← 이 방식이 안전
+  		}
+	  })
+    };
+    function showModal() {
+      document.getElementById("modal").style.display = "block";
+      document.getElementById("overlay").style.display = "block";
+    }
+
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+      document.getElementById("overlay").style.display = "none";
+    }
+
+    // 로그인 실패 시 자동 실행 (Flask에서 실패 정보를 넘겨줬을 때)
+    {% if login_failed %}
+    showModal();
+    {% endif %}
+  </script>
+</body>
+</html>

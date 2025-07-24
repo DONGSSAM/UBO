@@ -1,0 +1,793 @@
+<!DOCTYPE html> 
+<html lang="en">  
+  
+<head>  
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload stylesheet" as="style" href='https://fonts.googleapis.com/css2?family=Gothic+A1:wght@200&family=Nanum+Gothic&family=Nanum+Myeongjo&family=Noto+Sans+KR:wght@400&family=Roboto:wght@100&display=swap'>    
+    <title>우  보</title>
+    <style>/*헤드의 스타일은 사용할 요소들의 스타일만 지정함 컨테이너박스 안에서 추가된다면 어디서 추가될지 이미지로만 설정함 스크립트와 호환은 x 폰트나 위치, 에니메이션 정도로만 설정 나중에 js에서 기능 추가할 때 고려해서 none정도만 단순 디자인만 설정함*/
+        @import url('https://fonts.googleapis.com/css?family=Lato:400,700');
+        @import url('https://fonts.googleapis.com/css?family=Do+Hyeon:400');
+
+        @font-face {
+            font-family: 'NanumGothic';
+            font-style: normal;
+            src: url("/fonts/NanumGothic-Regular.ttf");
+        }
+
+        *,
+        *:before, 
+        *:after {
+            box-sizing: border-box;/*모든 요소를 width height로 너비, 높이 패딩, 보더 자동으로 설정해줌*/
+        }
+        p {
+  		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  		font-size: 16px;
+  		color: #333;
+ 		margin: 2px;
+		}
+
+        ul {
+            margin: 0;
+            padding: 15px 15px 0 15px;
+        }
+
+        html,body {
+            height: 100%;
+            width: 100%;
+            display: flex;/*플렉스 박스 레이아웃*/
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            margin: 0 auto;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;            
+            width: 100%;
+        }
+
+        .chat {
+            width: 100%;
+            color: #434651;            
+            border: 2px solid #EEEEEE  ;
+            max-width: 430px;
+            margin: 0 auto;
+
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+        }
+
+        .chat .chat-header {
+            display: flex;
+            padding: 5px 0 7px 0;
+            border-bottom: 4px solid white;
+            align-items: center;
+            justify-content: center;
+            background-color:#F4F4F4;
+        }
+        
+        .chat .chat-header .chat-about {
+            margin-left: 20px;
+            margin-right: 20px;
+            font-size: 35px;            
+            font-family: 'Do Hyeon';
+            text-align: center;
+        }
+        
+        .chat .chat-history {
+            padding: 10px 0px 10px 0px;
+            border-bottom: 5px solid white;
+            scrollbar-width: none;/*파이어폭스 스크롤바 안보이게 설정*/
+            overflow-y: auto; /* 스크롤바 설정 자동 */
+            height: 575px;
+        }
+
+        /* Chrome, Safari, Edge */
+        .chat .chat-history::-webkit-scrollbar {
+            display: none;
+        }
+
+        .chat .chat-history .message-data {
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .chat .chat-history .message-data-time {
+            font-size: 14px;
+        }
+
+        .chat .chat-history .message {
+            color: white;
+            padding: 18px 20px;
+            line-height: 22px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            width: 100%;
+            position: relative;/*after의 절대적 기준점이 돼서 after 적용할 수 있게 함*/
+        }
+
+        .chat .chat-history .message:after {/*my-message는 여기서 설정한 기본 설정을 따름*/
+            bottom: 100%;
+            border: solid transparent;
+            content: " ";
+            height: 0;
+            width: 0;
+            position: absolute;
+            pointer-events: none;
+            border-bottom-color: #F1F1F1  ;/*아래로 향한 삼각형을 만들도록 border설정함*/
+            border-width: 10px;
+            right: 17%;
+        }
+
+        .chat .chat-history .my-message {/*메세지를 입력했을 때 my-message가 나옴*/
+            background: #F1F1F1;
+            padding: 5px 10px;
+            font-size: 15px;    
+            width: 90%;
+            color : black;            
+        }
+
+        .chat .chat-history .other-message {
+            border: 1px solid #8A8A8A;
+            padding: 5px 10px;
+            font-size: 15px;
+            width: 90%;
+            color : black;
+        }
+
+        .chat .chat-history .other-message:after {
+            border-bottom-color: #8A8A8A;
+            left: 17%;
+        }
+
+        .chat .chat-message {
+            padding: 5px 15px 0px 15px;
+            background-color:#EFEFEF;
+        }
+
+        .chat .chat-message textarea {
+            width: 100%;
+            border: none;
+            padding: 10px 20px;
+            font: 14px/22px "Lato", Arial, sans-serif;
+            border-radius: 15px;
+            resize: none;
+            margin-bottom: 20px;
+        }
+
+        .chat .chat-message textarea:focus {
+            outline: none;
+            border: 2px solid #DAA520; /* 짙은 황금색 */
+        }
+
+        .align-right {
+            text-align: right;
+            float: right;
+        }
+
+        .float-right {
+            float: right;/*요소가 부모의 박스 안에서 오른쪽으로 붙음*/
+            margin-right: 10px;
+        }
+
+        .float-left {
+            float: left;
+            margin-left: 10px;
+        }
+
+        .clearfix:after {/*부모가 자식의 float속성때문에 높이를 잃는 것을 방지함*/
+            visibility: hidden;
+            display: block;
+            font-size: 0;
+            content: " ";
+            clear: both;
+        }
+
+        .face-image {
+            position: relative;
+            top: 0.5rem;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+        }
+
+         /* Added on 2023-08-22: Waiting animation styles */
+         .loading-dots {
+            display: inline-block;
+            /* width: 30px; */
+            height: 10px;
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .loading-dots span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin: 0 2px;
+            background-color: #555;
+            border-radius: 50%;
+            opacity: 0;/*투명도 설정 완전 투명*/
+            animation: loading-dots 1.5s infinite;/*애니메이션 반복 설정*/
+            animation-timing-function: ease-in-out;
+        }
+
+        .loading-dots span:nth-child(1) { animation-delay: 0.1s; }/*loading-dots의 첫번째 span에만 적용*/
+        .loading-dots span:nth-child(2) { animation-delay: 0.3s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.5s; }
+
+        @keyframes loading-dots {/* 키프레임으로 애니메이션을 정의해서 요소에 적용함*/
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .info {
+            display: block;
+            height: 1.2rem;
+            font-size: 12px;
+            color: #1A237E ;
+            font-weight: bolder;
+        }
+
+        .blink {
+            animation-name: blink;
+            animation-duration: 2s;
+            animation-delay: 0.5s;
+            animation-iteration-count: 50;
+        }
+
+        .drag-over {/*나중에 클라스 리스트에 속성 더해서 처리하게 해줌 script로*/
+            /*background: #b39198*/
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .user-info {
+  		display: flex;
+  		flex-direction: column; /* 세로 방향 정렬 */
+  		align-items: flex-start; /* 왼쪽 정렬 (원하면 center도 가능) */
+		}
+
+        #file {/*id가 file일때 input요소를 숨기고 특정한 기능을 추가하기 위해서 display를 none으로 지정함 input의 타입이 파일이면 누르면 파일탐색기 나오는 버튼이 생성됨*/
+            display: none;
+        }
+		.modal {
+  		font-family: 'NanumGothic';
+  		position: fixed;
+  		top: 45%;
+  		left: 50%;
+  		transform: translate(-50%, -50%);
+  		background-color: white;
+  		border: 1px solid #ccc;
+  		padding: 20px;
+  		box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  		z-index: 1000;
+  		border-radius: 5px;
+  		width: 400px; /* 적당한 너비 지정 */
+  		display: flex;
+  		flex-direction: column;
+		}
+
+		.modal-overlay {
+  		display: none;
+  		position: fixed;
+  		top: 0; left: 0;
+  		width: 100vw; height: 100vh;
+  		background: rgba(0, 0, 0, 0.5);
+  		justify-content: center;
+  		align-items: center;
+  		z-index: 1000;
+		}
+        
+		.modal-header {
+  		display: flex;
+  		justify-content: space-between;
+  		align-items: center;
+  		margin-bottom: 15px;
+		}
+
+		.modal-header h2 {
+  		margin: 0;
+		}        
+        
+        #toggleSettingsBtn {
+  		padding: 5px 12px;
+  		cursor: pointer;
+		}
+        
+    	.modal-footer {
+      	margin-top: 15px;
+      	padding: 5px 10px;
+      	background: #007bff;
+      	color: white;
+      	border: none;
+      	border-radius: 5px;
+      	cursor: pointer;
+        display: flex;
+  		justify-content: flex-end;
+  		gap: 10px;
+    	}
+		.modal-footer button {
+ 		padding: 6px 12px;
+  		cursor: pointer;
+		}
+
+    	.modal-footer:hover {
+     	background: #0056b3;
+    	}
+            
+        .user {
+  		color: #6a1b9a;
+  		padding: 5px 5px;
+		}
+
+        .center-image {
+            text-align: center;
+        }
+
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
+</head>
+
+<body onload="loadRules()">
+    <div class="container clearfix"><!-- 컨테이너 박스에 디자인할 요소들 설정해서 배치함 -->
+        <div class="chat">
+            <div class="chat-header clearfix">
+                <button onclick="openModal('modal1')">학급 규칙 보기</button>
+                <img style="width:60px; border-radius:50px; margin-left:10px;" src="{{ url_for('static', filename='images/logo.png') }}?v=3" alt="moungbo" />
+                <div class="chat-about" style="white-space: pre;">우리반보약</div>
+                <div class="user-info">
+                    <p>👤: <span class="user" id="username">{{ username }}</span></p>
+                	<p>🪀: <span class="user" id="point">{{ point }}</span></p>
+                </div>
+
+            </div> <!-- end chat-header -->
+
+            <div class="chat-history"> 
+                <ul style="list-style:none;">
+
+                </ul>
+            </div> <!-- end chat-history -->
+
+            <div class="chat-message">
+                <span class=info></span>
+                <textarea name="message-to-send" id="message-to-send" placeholder="메시지를 입력하세요." rows="1"></textarea> 
+                <div>
+                    <input type="file" id="image-upload" style="display:none">
+                    <button id="send" style="display:none">Send</button>
+                </div>
+            </div> <!-- end chat-message -->
+        </div> <!-- end chat -->
+    </div> <!-- end container -->
+    <div class="modal-overlay" id="modal1" onclick="handleOverlayClick(event, 'modal1')">
+  		<div class="modal" >
+    		<div class="modal-header">
+      			<h2>학급 규칙</h2>
+      			<button id="toggleSettingsBtn">설정</button>
+    		</div>
+    	<ul id="ruleList">
+    	</ul>
+    		<div class="modal-footer">
+      			<button onclick="closeModal('modal1')">닫기</button>
+      			<button onclick="openModal('modal2')">규칙 추가</button>
+    		</div>
+  		</div>
+	</div>
+    <div class="modal-overlay" id="modal2" onclick="handleOverlayClick(event, 'modal2')">
+  		<div class="modal">
+    	<h2 class="modal-header">규칙 추가</h2>
+    	<input
+      	type="text"
+      	id="newRuleInput"
+      	placeholder="새로운 규칙 입력"
+      	onkeydown="handleKeyDown(event)"
+      	style="width:100%; margin-bottom:10px;"
+    	>
+        <div class="modal-footer">
+        	<button class="close-btn" onclick="handleRuleAddButtonClick()">추가</button>
+    		<button class="close-btn" onclick="closeModal('modal2')">닫기</button>
+        </div>
+  		</div>
+	</div>
+    <audio id="audioPlayer" controls style="display:none"></audio>
+    <!-- 핸들바 템플릿 사용해서 메세지를 동적으로 랜더링하기위한 템플릿 js가 동적으로 메세지를 읽고 붙임 메세지 변수에 담아서 템플릿의 매개변수로 함수실행함 -->
+     <script id="message-template" type="text/x-handlebars-template"> 
+         {% raw %}
+        <li class="clearfix">
+            <div class="message-data align-right">                
+                <span class="message-data-name" >나</span>
+                <span class="message-data-time" >Today</span> &nbsp; &nbsp;                
+            </div>
+            <div class="message my-message float-right">
+                {{messageOutput}}
+                {{#if imageUrl}}
+                	<div class="center-image">
+                    	<img src="{{imageUrl}}" alt="Uploaded Image" style="max-width: 250px; display: inline; margin: 10px;">
+                    </div> <!-- end center-image -->
+                {{/if}}
+            </div>
+      </li>
+      {% endraw %}
+    </script>
+<!-- clearfix 클래스는 자식요소에 맞게 높이 자동으로 맞춰짐, div요소는 display속성이 자동적으로 block이라 추가되면 줄바꿈돼서 배치됨-->
+    <script id="message-response-template" type="text/x-handlebars-template">
+        {% raw %}
+        <li class="clearfix">
+            <div class="message-data">
+                <img src="/static/images/trainer.png?v=1" class="face-image"?>
+                <span class="message-data-name">칭찬맨</span>
+                <span class="message-data-time">Today</span>
+            </div>
+            <div class="message other-message float-left">
+                {{#if loading}}
+                    <div class="loading-dots"><span></span><span></span><span></span></div>
+                {{else}}
+                    {{{messageOutput}}}
+                    {{#if imageUrl}}
+                        <div style="display: flex; justify-content: center; align-items: center;">
+                            <img src="{{imageUrl}}" alt="Uploaded Image" style="max-width: 200px; display: block; margin: 10px;">
+                        </div>
+                    {{/if}}
+                {{/if}}                
+            </div>
+        </li>      
+        {% endraw %}
+    </script>
+    <script>
+        (function () {<!-- 즉시실행함수 한번만 실행됨 초기화 내용 적용-->
+            var chat = {
+                messageToSend: '',//메세지 창에 표시하는 형태로 메세지, 드롭된 파일 대해서 처리하는 로직
+                init: function () {
+                    this.cacheDOM();//여기서 this는 chat이라는 객체임 그 객체에 대해서 초기화 설정함수 document.querySelector함수로 자동적으로 설정해줌 send버튼, 대화내용 객체로 가져옴
+                    this.bindEvents();//cacheDOM에서 설정한 것으로 이벤트리스너로 연결함
+                },                
+                // 드래그 앤 드롭 이벤트 핸들러를 chat 객체 내에 포함시킵니다.
+                initDragAndDrop: function () {
+                    var self = this; // 현재 chat 객체를 self 변수에 저장
+                    var dropArea = document.querySelector('body');
+                    if (!dropArea) {
+                        console.error('Drop area not found');
+                        return;
+                    }
+
+                    // 드래그 오버 이벤트(파일을 드래그해서 가져왔을때 새 탭에서 열리는 현상 밑에 있는preventDefaults 함수) 방지 바깥 스코프 참고하는 화살표함수 사용함 this가 dropArea로 인식하는 현상 방지
+                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                        dropArea.addEventListener(eventName, this.preventDefaults, false);
+                    });
+
+                      // 드롭 이벤트 핸들러 input요소에 자동으로 붙고 미리보기가 실행됨 여기서 this는 chat 객체를 가리킴 .bind가 있어서임 함수실행에서 내부 적으로는 dropArea참고해야함
+                    dropArea.addEventListener('drop', this.handleDrop.bind(this), false);
+                },
+                preventDefaults: function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                },
+            
+                handleDrop: function (e) {//파일을 차례대로 업로드하는 함수 이벤트에 대해 실행할 함수를 설정함
+                    let dt = e.dataTransfer;
+                    let files = dt.files;
+            
+                    this.handleFiles(files);
+                },
+            
+                handleFiles: function (files) {
+                    ([...files]).forEach(this.uploadFile.bind(this));//파일을 배열형태로 업로드함
+                },
+            
+                uploadFile: function (file) {
+                    var fileInput = document.getElementById('image-upload');
+                    var dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    fileInput.files = dataTransfer.files;
+            
+                    // 미리보기 기능을 호출합니다. 밑에 함수 있음 이미지 랜더링해서 미리보기만 띄우기
+                    this.previewImage();
+                },
+                // Cache DOM elements
+                cacheDOM: function () {
+                    this.chatHistory = document.querySelector('.chat-history');
+                    this.button = document.querySelector('#send');
+                    this.textarea = document.getElementById('message-to-send');
+                    this.chatHistoryList = this.chatHistory.querySelector('ul');
+                },
+                // Bind events to elements 위에서 설정한 객체에 이벤트가 발생했을 때 어떤 함수가 실행될지 설정함
+                bindEvents: function () {
+                    this.button.addEventListener('click', this.addMessage.bind(this));
+                    this.textarea.addEventListener('keyup', this.addMessageEnter.bind(this));
+                    document.getElementById('image-upload').addEventListener('change', this.previewImage.bind(this));//image-upload로 폼요소의 값이 변했을 때(input의 객체가 변했을때) previewImage함수 실행됨
+                },
+                // Render a new message isUser이 true이면 사용자메세지 false이면 상대방 메세지
+                render: function (message, imageUrl, isUser) {
+                    //this.scrollToBottom();
+
+                    const templateId = isUser ? "#message-template" : "#message-response-template";//isUser가 true이면 앞에 값, false면 뒤에 값 할당                    
+
+                    const template = Handlebars.compile(document.querySelector(templateId).innerHTML);
+                    //HTML에서 templateId객체를 선택해서 그 객체를 브라우저가 인식할 수 있는 코드로 바꿔줌 handlebars 사용하겠다는 표시가 스크립트로 html파일에 있어야함 type="text/x-handlebars-template"
+
+                    const context = {
+                        messageOutput: message,
+                        imageUrl: imageUrl, 
+                        time: this.getCurrentTime()
+                    };
+
+                    let htmlString = template(context)
+                    if (isUser) {
+                    	this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
+                    }//채팅창에 동적으로 html추가, 추가된 후 자동 스크롤 내림
+                    else {
+                        this.chatHistoryList.lastElementChild.innerHTML = htmlString;
+                    }
+                    this.scrollToBottom();
+
+                    if (isUser) {
+                        
+                        this.textarea.value = '';
+                    }
+                },
+                showResponse:  function (message) {
+                    this.scrollToBottom();
+                    const templateId = "#message-response-template";//id가 이것이고 <script type="text/x-handlebars-template">인 요소를 찾아서 템플릿 코드를 templateSource에 저장함
+                    let templateSource = document.querySelector(templateId).innerHTML;
+                    const template = Handlebars.compile(templateSource);//템플릿을 객체화함
+                    const context = {
+                        messageOutput: message,
+                        time: this.getCurrentTime()
+                    };
+                    let htmlString = template(context);//메세지에 템플릿을 적용함
+                    
+    
+                    document.querySelector('.chat-history > ul > li:last-child').innerHTML = htmlString//채팅창에 있는 html구조 중 마지막에 메세지 데이터를 띄움 동적으로 html의 구조에 추가한다는 코드임
+                    this.scrollToBottom();                    
+                },     
+                 // 일정 시간(seconds) 경과 시점을 알릴 수 있는 비동기 함수
+                waitSeconds: async function (delay) {
+                    return new Promise(resolve => {
+                        this.waitTime = 0;//기다림을 구현
+                        setTimeout(() => {
+                            resolve();
+                        }, delay + this.waitTime);//처음 설정한 시간 만큼 기다렸다가 다음에는 delay만큼만 기다렸다 다음 코드 호출함
+                    });
+                },
+                showBubbleAfterSeconds: async function (delay) {
+                    return new Promise(resolve => {
+                        setTimeout(() => {
+                            const templateId = "#message-response-template";//설정한 템플릿 가져오는 코드
+                            const template = Handlebars.compile(document.querySelector(templateId).innerHTML);
+                            const context = {
+                                loading: true,//context 내용이 로딩중이라는 내용임
+                                time: this.getCurrentTime()
+                            };
+                            // 물방울 애니메이션을 시작합니다.
+                            var loadingHtml = template(context);
+                            this.chatHistoryList.insertAdjacentHTML('beforeend', loadingHtml);//chathistorylist의 마지막에 로딩중을 추가함
+                            this.scrollToBottom();
+                            resolve();
+                        }, delay);
+                    });
+                },
+                throwPokemon: async function () {
+    				const randomId = Math.floor(Math.random() * 1025) + 1;
+    				const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${randomId}.png`;
+                    const name = await this.getPokemonKoreanName(randomId)
+                    const message = `${name} 잡았다!!`;
+                    this.render(message, imageUrl, false);
+                    
+                },
+                getPokemonKoreanName: async function(id) {
+                    const res = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
+            		const data = await res.json();
+            		const koreanEntry = data.names.find(entry => entry.language.name === "ko");
+            		return koreanEntry ? koreanEntry.name : "(이름 없음)";
+                },
+                catchPokemon: async function(username, amount) {
+                    const res = await fetch("/catchpokemon", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, amount })
+                	});
+                    const result = await res.json();
+                    if (result.success) {
+                        await this.throwPokemon();
+                        document.getElementById("point").innerText = result.new_point;
+                    }
+                    else {
+                        this.render(result.message, null, false)
+                    }
+                },
+ 
+                // Add a message and its response
+                addMessage: async function () {
+                    const username = "{{ username }}";
+                    const formData = new FormData();//FormData는 서버에 보낼 데이터를 딕셔너리 형식으로 추가할 수 있게 하는 객체를 만들어주는 함수임
+                    this.messageToSend = this.textarea.value.trim();//textarea의 dom요소에 입력값을 공백 제거해서 가져옴
+                    if (this.messageToSend){
+                        this.render(this.messageToSend, null, true);
+                    	}//render함수로 내가 보낸 메세지를 먼저 채팅창에 띄워줌
+                    if (this.messageToSend.startsWith("!")){
+                    	showBubblePromise = this.showBubbleAfterSeconds(500)
+                    	waitPromise = this.waitSeconds(1500)
+                    	await showBubblePromise //답변이 출력되고 버블링이 발생되는 현상 제어
+                    	await waitPromise  //최소 2초는 버블링
+                		if (this.messageToSend === "!던져") {
+                        	await this.catchPokemon(username, -500);
+                    		}
+                        else if (this.messageToSend.startsWith("!전달 ")) {
+                            const give = this.messageToSend.split(" ")
+						    if (give.length < 3) {
+					        this.render("전달할 사용자 이름과 포인트를 입력하세요. 예: !전달 이름 100", null, false);
+					        return;
+						    }                            
+                            const targetName = give[1]
+    						const givingPoint = Number(give[2])
+
+    						if (!/^\d+$/.test(givingPoint)) {
+        						this.render("유효한 포인트 숫자를 입력하세요. 예: !전달 이름 100", null, false);
+        						return;
+    						}
+                            const res = await fetch("/give_point", {
+    							method: "POST",
+    							headers: { "Content-Type": "application/json" },
+    							body: JSON.stringify({
+        						to: targetName,
+        						amount: givingPoint  // 원하는 포인트 양을 추가
+    								})
+								});
+        					const result = await res.json();
+        					if (result.success) {
+            					this.render(result.message, null, false);  // 성공 메시지 출력
+            					document.getElementById("point").innerText = result.new_point;
+        					} 
+                        	else {
+            					this.render(result.message, null, false);  // 실패 메시지 출력
+        						}
+                    		}
+                    	else {
+                            this.render("그건 알 수 없는 말이야.", null, false)
+                        	}
+                    document.getElementById('image-upload').value = ''; // 이미지 필드 초기화 존재할 때를 조건으로 실행하는 경우도 있고 다시 같은 이미지 업로드해도 change가 발생하지 않는 경우도 있음
+                	}
+                },
+                // Add a message when the Enter key is pressed
+                addMessageEnter: function (event) {
+                    if (event.keyCode === 13) {//엔터 키코드 엔터 눌렀을 때 addMessage 실행
+                        this.addMessage();
+                    }   
+                },
+                // Scroll to the bottom of the chat history
+                scrollToBottom: function () {
+                    this.chatHistory.scrollTop = this.chatHistory.scrollHeight;//현재 스크롤 위치값을 스크롤 가능한 최대 높이 chat-chatHistory는 채팅창 DOM임
+                },
+                // Get the current time
+                getCurrentTime: function () {
+                    let currentDate = new Date();
+                    return currentDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+                    
+                },
+                // 이미지 미리보기 함수
+                previewImage: function() {
+                    this.scrollToBottom();
+                    const imageFile = document.getElementById('image-upload').files[0];
+                    if (imageFile) {
+                        const imageUrl = URL.createObjectURL(imageFile);//브라우저가 랜더링 할 수 있도록 임시로 이미지 url을 만들어 줌
+                        this.render('', imageUrl, true);
+                        document.getElementById('image-upload').value = '';// 빈 메시지로 이미지만 렌더링 화면에 띄워줌
+                    }
+                },
+            };
+            chat.init();//채팅기능 초기화 실행, 드래그앤드롭기능 설정 실행
+            chat.initDragAndDrop();
+        })();
+        
+        function openModal(id) {
+    	document.getElementById(id).style.display = "flex";
+  		}
+
+  		function closeModal(id) {
+    		document.getElementById(id).style.display = "none";
+  		}
+		function handleOverlayClick(event, modalId) {
+  			if (event.target === event.currentTarget) {
+    			closeModal(modalId);
+  			}
+		}
+        function submitRule(input) {
+          const newRule = input.value.trim();
+          if (newRule === "") return;
+
+          const ruleList = document.getElementById("ruleList");
+          const newItem = document.createElement("li");
+          newItem.textContent = newRule;
+          ruleList.appendChild(newItem);
+          input.value = "";
+          closeModal("modal2");
+
+          fetch("/add_rule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: newRule })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              addRuleToDOM(newRule); // DOM에 추가하는 함수가 있다면
+            }
+          });
+        }
+
+        function handleKeyDown(event) {
+          if (event.key === "Enter") {
+            const input = event.target;
+            submitRule(input);
+          }
+        }
+
+        function handleRuleAddButtonClick() {
+          const input = document.getElementById("newRuleInput");
+          submitRule(input);
+        }
+        
+		function loadRules() {
+  			fetch("/get_rules")
+    		.then(res => res.json())
+    		.then(ruleList => {
+      		const ruleUl = document.getElementById("ruleList");
+      		ruleUl.innerHTML = ""; // 기존 규칙 초기화
+      		ruleList.forEach(rule => {
+        		const li = document.createElement("li");
+        		li.textContent = rule.content;
+        		ruleUl.appendChild(li);
+      		});
+    		});
+		}
+        
+        document.addEventListener('DOMContentLoaded', function () {//웹페이지에 HTML이 완성되고 DOM 트리거가 완성된 이벤트
+            var dropArea = document.querySelector('body');
+
+            if (!dropArea) {
+                console.error('Drop area not found');
+                return;
+            }
+
+            function preventDefaults(e) {
+                e.preventDefault();//기본동작 방지(새 텝에 여는 동작)
+                e.stopPropagation();//이벤트버블링방지
+            }
+
+            function highlight(e) {
+                dropArea.classList.add('drag-over');//dropArea요소에 drag-over CSS클래스 추가하는 코드임
+            }
+
+            function unhighlight(e) {
+                dropArea.classList.remove('drag-over');
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);//파일을 끌어오면(두 리스트 이벤트) dropArea의 클래스 리스트에 추가되어 CSS스타일이 적용됨
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+
+        });
+
+    </script>
+
+</body>
+
+</html>
