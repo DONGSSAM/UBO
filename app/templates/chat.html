@@ -15,7 +15,7 @@
         @font-face {
             font-family: 'NanumGothic';
             font-style: normal;
-            src: url("/fonts/NanumGothic-Regular.ttf");
+            src: url("/static/fonts/NanumGothic-Regular.ttf");
         }
 
         *,
@@ -311,7 +311,7 @@
     	.modal-footer {
       	margin-top: 15px;
       	padding: 5px 10px;
-      	background: #007bff;
+      	background: white;
       	color: white;
       	border: none;
       	border-radius: 5px;
@@ -325,10 +325,21 @@
   		cursor: pointer;
 		}
 
-    	.modal-footer:hover {
-     	background: #0056b3;
-    	}
-            
+        #ruleList li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 10px;
+        }
+
+        .rule-text {
+        flex: 1;
+        }
+
+        .rule-actions {
+        margin-left: 8px;
+        }        
+
         .user {
   		color: #6a1b9a;
   		padding: 5px 5px;
@@ -377,7 +388,7 @@
   		<div class="modal" >
     		<div class="modal-header">
       			<h2>학급 규칙</h2>
-      			<button id="toggleSettingsBtn">설정</button>
+      			<button id="toggleSettingsBtn" onclick="toggleEditMode()">설정</button>
     		</div>
     	<ul id="ruleList">
     	</ul>
@@ -387,6 +398,7 @@
     		</div>
   		</div>
 	</div>
+
     <div class="modal-overlay" id="modal2" onclick="handleOverlayClick(event, 'modal2')">
   		<div class="modal">
     	<h2 class="modal-header">규칙 추가</h2>
@@ -394,7 +406,7 @@
       	type="text"
       	id="newRuleInput"
       	placeholder="새로운 규칙 입력"
-      	onkeydown="handleKeyDown(event)"
+      	onkeydown="submitRuleEnter(event)"
       	style="width:100%; margin-bottom:10px;"
     	>
         <div class="modal-footer">
@@ -403,6 +415,25 @@
         </div>
   		</div>
 	</div>
+
+    <div class="modal-overlay" id="modal3" onclick="handleOverlayClick(event, 'modal3')">
+    <div class="modal">
+        <h2 class="modal-header">규칙 수정</h2>
+        <input
+        type="text"
+        id="editRuleInput" 
+        placeholder=""
+      	onkeydown="confirmEditEnter(event)"
+        style="width:100%; margin-bottom:10px;"
+        > <!-- ★ 기존 newRuleInput → editRuleInput로 변경 -->
+        <div class="modal-footer">
+        <button class="close-btn" onclick="confirmEdit()">수정</button> <!-- 기존 handleRuleAddButtonClick → confirmEdit -->
+        <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
+        </div>
+    </div>
+    </div>
+
+
     <audio id="audioPlayer" controls style="display:none"></audio>
     <!-- 핸들바 템플릿 사용해서 메세지를 동적으로 랜더링하기위한 템플릿 js가 동적으로 메세지를 읽고 붙임 메세지 변수에 담아서 템플릿의 매개변수로 함수실행함 -->
      <script id="message-template" type="text/x-handlebars-template"> 
@@ -693,30 +724,38 @@
             chat.initDragAndDrop();
         })();
         
+        let currentEditItem = null;//li 저장용 변수
+
         function openModal(id) {
     	document.getElementById(id).style.display = "flex";
   		}
 
   		function closeModal(id) {
     		document.getElementById(id).style.display = "none";
+            currentEditItem = null;
   		}
-		function handleOverlayClick(event, modalId) {
+		function handleOverlayClick(event, modalId) {//배경을 클릭했을 때 화면 닫기
   			if (event.target === event.currentTarget) {
     			closeModal(modalId);
   			}
 		}
-        function submitRule(input) {
+        function submitRule(input) {//서버에 규칙 제출
           const newRule = input.value.trim();
           if (newRule === "") return;
 
           const ruleList = document.getElementById("ruleList");
           const newItem = document.createElement("li");
-          newItem.textContent = newRule;
+
+          const textSpan = document.createElement("span");
+          textSpan.className = "rule-text";
+          textSpan.textContent = newRule;
+          newItem.appendChild(textSpan);   //li에 text적힌 span 추가
+
           ruleList.appendChild(newItem);
           input.value = "";
           closeModal("modal2");
 
-          fetch("/add_rule", {
+          fetch("/add_rule", {//서버에 전달
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ content: newRule })
@@ -724,19 +763,123 @@
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              addRuleToDOM(newRule); // DOM에 추가하는 함수가 있다면
+                newItem.setAttribute("data-id", data.id); // ← ★ id를 li에 저장
+                ruleList.appendChild(newItem);
+                addRuleToDOM(newRule);// DOM에 추가하는 함수가 있다면
             }
           });
         }
+        
+        let editMode = false;
+        
+        function toggleEditMode() {//수정모드 수정할 때 필요한 코드가 있음
+        editMode = !editMode;//수정,삭제모드일때만 버튼이 새로 생성돼서 표시되게
+        const ruleItems = document.querySelectorAll("#ruleList li");//li각각 불러오기 li의 span-text, span-button
 
-        function handleKeyDown(event) {
+        ruleItems.forEach((item) => {
+            if (editMode) {
+            const actions = document.createElement("span");
+            actions.className = "rule-actions";//각각의 span에 클래스명 지정
+
+            // 수정 버튼
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "수정";
+            editBtn.className = "edit-btn";
+            editBtn.onclick = () => editRule(item);//수정 기능은 따로 밑에 함수로 빼둠
+
+            // 삭제 버튼
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "삭제";
+            deleteBtn.className = "delete-btn";
+            deleteBtn.onclick = () => {
+            const id = item.dataset.id;
+            fetch('/delete_rule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            }).then(res => res.json())
+                .then(data => {
+                if (data.success) {
+                    item.remove();
+                } else {
+                    alert('삭제 실패');
+                }
+                });
+                document.getElementById("toggleSettingsBtn").click();
+            };
+
+            // 중복 추가 방지
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+            if (!item.querySelector(".rule-actions")) item.appendChild(actions);
+
+            } else {
+            // 편집 모드 해제 시 버튼 묶음 전체 제거
+            const actions = item.querySelector(".rule-actions");
+            if (actions) actions.remove();
+            }
+        });
+        }
+
+        function editRule(item) {
+            currentEditItem = item;
+
+            const textSpan = item.querySelector(".rule-text");
+            const oldText = textSpan.firstChild.textContent.trim();
+
+            const input = document.getElementById("editRuleInput");
+            input.value = "";
+            input.placeholder = oldText;
+
+            document.getElementById("modal3").style.display = "flex"; // 모달 띄우기
+        }
+
+        function confirmEdit() {
+            const input = document.getElementById("editRuleInput");
+            const newText = input.value.trim();
+
+            if (!newText) {
+                alert("수정할 내용을 입력해주세요.");
+                return;
+            }
+
+            const item = currentEditItem;
+            const ruleId = item.dataset.id;
+            const textSpan = item.querySelector(".rule-text");
+
+            fetch("/update_rule", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: ruleId, content: newText }),
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    textSpan.textContent = newText;
+                    document.getElementById("toggleSettingsBtn").click(); // 설정 버튼 자동 닫기
+                    closeModal("modal3");
+                } else {
+                    alert("수정 실패");
+                }
+            });
+        }
+
+
+
+        function confirmEditEnter(event) {
+          if (event.key === "Enter") {
+            const input = event.target;
+            confirmEdit();
+          }            
+        }
+        function submitRuleEnter(event) {//html과 연결할 함수
           if (event.key === "Enter") {
             const input = event.target;
             submitRule(input);
           }
         }
 
-        function handleRuleAddButtonClick() {
+        function handleRuleAddButtonClick() {//html과 연결할 함수
           const input = document.getElementById("newRuleInput");
           submitRule(input);
         }
@@ -749,7 +892,13 @@
       		ruleUl.innerHTML = ""; // 기존 규칙 초기화
       		ruleList.forEach(rule => {
         		const li = document.createElement("li");
-        		li.textContent = rule.content;
+                li.dataset.id = rule._id;
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'rule-text';
+                textSpan.textContent = rule.content;
+
+        		li.appendChild(textSpan);
         		ruleUl.appendChild(li);
       		});
     		});

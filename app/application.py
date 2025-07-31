@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, Response, url_for, redirect, 
 from datetime import datetime
 import sys, bcrypt
 from db import users, check_connection, rules
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 
@@ -110,12 +111,41 @@ def add_rule():
             "created_at": datetime.now()#관리자 유저 이름 기반으로 채팅방 나누고 관리자마다 관리하는 학생, 채팅방 규칙 데이터베이스에 저장하기
         })
         return jsonify(success=True)
-    return jsonify(success=False, message="빈 규칙입니다.")
+    return jsonify(success=False, message="빈 규칙입니다.", id=rules["_id"])
 
 @app.route("/get_rules")
 def get_rules():
-    rule_list = list(rules.find({}, {"_id": 0, "content": 1}))
+    rule_list = list(rules.find({}, {"_id": 1, "content": 1}))
+    for r in rule_list:
+        r['_id'] = str(r['_id'])
     return jsonify(rule_list)
+
+@app.route("/update_rule", methods=["POST"])
+def update_rule():
+    data = request.get_json()
+    rule_id = data["id"]
+    new_content = data["content"]
+
+    result = rules.update_one(
+        {"_id": ObjectId(rule_id)},
+        {"$set": {"content": new_content}}
+    )
+
+    return jsonify({"success": result.modified_count == 1})
+
+@app.route('/delete_rule', methods=['POST'])
+def delete_rule():
+    data = request.get_json()
+    rule_id = data.get('id')
+    if not rule_id:
+        return jsonify({'success': False, 'message': 'ID 없음'}), 400
+
+    result = rules.delete_one({'_id': ObjectId(rule_id)})
+    if result.deleted_count == 1:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': '삭제 실패'})
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80)
