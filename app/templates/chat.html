@@ -723,8 +723,6 @@
             chat.init();//채팅기능 초기화 실행, 드래그앤드롭기능 설정 실행
             chat.initDragAndDrop();
         })();
-        
-        let currentEditItem = null;//li 저장용 변수
 
         function openModal(id) {
     	document.getElementById(id).style.display = "flex";
@@ -765,11 +763,10 @@
             if (data.success) {
                 newItem.setAttribute("data-id", data.id); // ← ★ id를 li에 저장
                 ruleList.appendChild(newItem);
-                addRuleToDOM(newRule);// DOM에 추가하는 함수가 있다면
             }
           });
         }
-        
+        let currentEditItem = null;//li 저장용 변수        
         let editMode = false;
         
         function toggleEditMode() {//수정모드 수정할 때 필요한 코드가 있음
