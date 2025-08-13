@@ -109,6 +109,33 @@ def give_point():
 
     return jsonify(success=True, message=f"{to_user}님에게 {amount}포인트를 전달했어요!", new_point=new_point)
 
+@app.route("/give_score", methods=["POST"])
+def give_score():
+    data = request.get_json()
+    rule_id = data.get("ruleId")
+    user_id = data.get("userId")
+
+    if not rule_id or not user_id:
+        return jsonify(success=False, message="잘못된 요청"), 400
+
+    # 규칙에서 score 가져오기
+    rule = rules.find_one({"_id": ObjectId(rule_id)})
+    if not rule:
+        return jsonify(success=False, message="규칙을 찾을 수 없음"), 404
+
+    score = rule.get("score", 0)
+
+    # 유저에게 점수 부여
+    result = users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$inc": {"point": score}}
+    )
+
+    if result.modified_count == 1:
+        return jsonify(success=True, score=score)
+    else:
+        return jsonify(success=False, message="유저 점수 업데이트 실패"), 400
+
 @app.route("/add_rule", methods=["POST"])
 def add_rule():
     data = request.get_json()

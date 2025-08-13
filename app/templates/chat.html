@@ -427,37 +427,38 @@
 	</div>
 
     <div class="modal-overlay" id="modal3" onclick="handleOverlayClick(event, 'modal3')">
-    <div class="modal">
-        <h2 class="modal-header">규칙 수정</h2>
-        <input
-        type="text"
-        id="editRuleInput" 
-    
-      	onkeydown="moveToEditScoreEnter(event)"
-        style="width:100%; margin-bottom:10px;"
-        > <!-- ★ 기존 newRuleInput → editRuleInput로 변경 -->
+        <div class="modal">
+            <h2 class="modal-header">규칙 수정</h2>
+            <input
+            type="text"
+            id="editRuleInput" 
         
-        <input
-        type="number"
-        id="editScoreInput"
-        
-        min="0"
-        onkeydown="confirmEditEnter(event)"
-        style="width:100%; margin-bottom:10px;"
-        >
-        <div class="modal-footer">
-        <button class="close-btn" onclick="confirmEdit()">수정</button> <!-- 기존 handleRuleAddButtonClick → confirmEdit -->
-        <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
+            onkeydown="moveToEditScoreEnter(event)"
+            style="width:100%; margin-bottom:10px;"
+            > <!-- ★ 기존 newRuleInput → editRuleInput로 변경 -->
+            
+            <input
+            type="number"
+            id="editScoreInput"
+            
+            min="0"
+            onkeydown="confirmEditEnter(event)"
+            style="width:100%; margin-bottom:10px;"
+            >
+            <div class="modal-footer">
+            <button class="close-btn" onclick="confirmEdit()">수정</button> <!-- 기존 handleRuleAddButtonClick → confirmEdit -->
+            <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
+            </div>
         </div>
     </div>
-    </div>
 
-    <div class="modal-overlay" id="modal4" onclick="handleOverlayClick(event, 'modal3')">
-    <div class="modal">
-        <h3 class="modal-header">점수 부여</h3>
-        <div id="userList"></div>
+    <div class="modal-overlay" id="modal4" onclick="handleOverlayClick(event, 'modal4')">
+        <div class="modal">
+            <h3 class="modal-header">점수 부여</h3>
+            <div id="userList"></div>
 
-        <button class="close-btn" onclick="closeModal('modal4')">닫기</button>
+            <button class="close-btn" onclick="closeModal('modal4')">닫기</button>
+        </div>
     </div>
 
     <audio id="audioPlayer" controls style="display:none"></audio>
@@ -799,8 +800,7 @@
             }
           });
         }
-        let currentEditItem = null;//li 저장용 변수
-        let giveScoreItem = null;        
+        let currentEditItem = null;//li 저장용 변수        
         let editMode = false;
         
         function toggleEditMode() {//수정모드 수정할 때 필요한 코드가 있음
@@ -922,7 +922,7 @@
 
         function openScoreModal(item) {
             // 선택한 규칙 저장
-            giveScoreItem = item;
+            currentEditItem = item;
             const modal = document.getElementById('modal4');
             modal.style.display = 'flex';
 
@@ -936,6 +936,26 @@
                     users.forEach(user => {
                         const btn = document.createElement("button");
                         btn.textContent = user.username;
+                        btn.onclick = async () => {
+                            const ruleId = currentEditItem.dataset.id;       // li에 저장된 id
+                            const res = await fetch("/give_score", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    ruleId: ruleId,
+                                    userId: user.id
+                                })
+                            });
+
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`${user.username}에게 ${data.score}점 부여 완료`);
+                            } else {
+                                alert("점수 부여 실패");
+                            }
+                            modal.style.display = 'none';
+                        };
+
                         userListDiv.appendChild(btn);
                     });
                 });
