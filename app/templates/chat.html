@@ -394,7 +394,7 @@
     	</ul>
     		<div class="modal-footer">
       			<button onclick="closeModal('modal1')">닫기</button>
-      			<button onclick="openModal('modal2')">규칙 추가</button>
+      			<button id="addRule" onclick="openModal('modal2')">규칙 추가</button>
     		</div>
   		</div>
 	</div>
@@ -406,9 +406,19 @@
       	type="text"
       	id="newRuleInput"
       	placeholder="새로운 규칙 입력"
-      	onkeydown="submitRuleEnter(event)"
+      	onkeydown="moveToScoreEnter(event)"
       	style="width:100%; margin-bottom:10px;"
     	>
+
+        <input
+        type="number"
+        id="newScoreInput"
+        placeholder="점수 입력"
+        min="0"
+        onkeydown="submitRuleEnter(event)"
+        style="width:100%; margin-bottom:10px;"
+        >
+
         <div class="modal-footer">
         	<button class="close-btn" onclick="handleRuleAddButtonClick()">추가</button>
     		<button class="close-btn" onclick="closeModal('modal2')">닫기</button>
@@ -422,10 +432,19 @@
         <input
         type="text"
         id="editRuleInput" 
-        placeholder=""
-      	onkeydown="confirmEditEnter(event)"
+    
+      	onkeydown="moveToEditScoreEnter(event)"
         style="width:100%; margin-bottom:10px;"
         > <!-- ★ 기존 newRuleInput → editRuleInput로 변경 -->
+        
+        <input
+        type="number"
+        id="editScoreInput"
+        
+        min="0"
+        onkeydown="confirmEditEnter(event)"
+        style="width:100%; margin-bottom:10px;"
+        >
         <div class="modal-footer">
         <button class="close-btn" onclick="confirmEdit()">수정</button> <!-- 기존 handleRuleAddButtonClick → confirmEdit -->
         <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
@@ -433,6 +452,13 @@
     </div>
     </div>
 
+    <div class="modal-overlay" id="modal4" onclick="handleOverlayClick(event, 'modal3')">
+    <div class="modal">
+        <h3 class="modal-header">점수 부여</h3>
+        <div id="userList"></div>
+
+        <button class="close-btn" onclick="closeModal('modal4')">닫기</button>
+    </div>
 
     <audio id="audioPlayer" controls style="display:none"></audio>
     <!-- 핸들바 템플릿 사용해서 메세지를 동적으로 랜더링하기위한 템플릿 js가 동적으로 메세지를 읽고 붙임 메세지 변수에 담아서 템플릿의 매개변수로 함수실행함 -->
@@ -737,36 +763,44 @@
     			closeModal(modalId);
   			}
 		}
-        function submitRule(input) {//서버에 규칙 제출
-          const newRule = input.value.trim();
-          if (newRule === "") return;
+        const role = "{{ role }}";
+        if (role !== "admin") {
+            document.getElementById("addRule").style.display = "none";
+            document.getElementById("toggleSettingsBtn").style.display = "none";
+        }
+        function submitRule(ruleInput, scoreInput) {//서버에 규칙 제출
+          const newRule = ruleInput.value.trim();
+          const newScore = scoreInput.value.trim();
+          if (newRule === "" || newScore === "") return;
 
           const ruleList = document.getElementById("ruleList");
           const newItem = document.createElement("li");
 
           const textSpan = document.createElement("span");
           textSpan.className = "rule-text";
-          textSpan.textContent = newRule;
+          textSpan.textContent = `${newRule} (${newScore}점)`;
           newItem.appendChild(textSpan);   //li에 text적힌 span 추가
 
           ruleList.appendChild(newItem);
-          input.value = "";
+          ruleInput.value = "";
+          scoreInput.value = "";
           closeModal("modal2");
 
           fetch("/add_rule", {//서버에 전달
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: newRule })
+            body: JSON.stringify({ content: newRule, score: Number(newScore) })
           })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
                 newItem.setAttribute("data-id", data.id); // ← ★ id를 li에 저장
-                ruleList.appendChild(newItem);
+                loadRules();
             }
           });
         }
-        let currentEditItem = null;//li 저장용 변수        
+        let currentEditItem = null;//li 저장용 변수
+        let giveScoreItem = null;        
         let editMode = false;
         
         function toggleEditMode() {//수정모드 수정할 때 필요한 코드가 있음
@@ -805,7 +839,13 @@
                 document.getElementById("toggleSettingsBtn").click();
             };
 
+            const giveScoreBtn = document.createElement("button");
+            giveScoreBtn.textContent = "🧑";
+            giveScoreBtn.className = "give-score-btn";
+            giveScoreBtn.onclick = () => openScoreModal(item);
+
             // 중복 추가 방지
+            actions.appendChild(giveScoreBtn);
             actions.appendChild(editBtn);
             actions.appendChild(deleteBtn);
             if (!item.querySelector(".rule-actions")) item.appendChild(actions);
@@ -820,26 +860,45 @@
 
         function editRule(item) {
             currentEditItem = item;
-
+            
             const textSpan = item.querySelector(".rule-text");
-            const oldText = textSpan.firstChild.textContent.trim();
+            const fullText = textSpan.textContent.trim();
 
-            const input = document.getElementById("editRuleInput");
-            input.value = "";
-            input.placeholder = oldText;
+            // "규칙 내용 (5점)" 형태라면 점수 분리하기
+            const match = fullText.match(/^(.*)\s\((\d+)점\)$/);
+
+            let oldContent = fullText;
+            let oldScore = "";
+
+            if (match) {
+                oldContent = match[1]; // 규칙 내용
+                oldScore = match[2];   // 점수 (문자열)
+            }
+
+            const contentInput = document.getElementById("editRuleInput");
+            const scoreInput = document.getElementById("editScoreInput");
+
+            // placeholder 대신 바로 value로 넣는 게 더 UX 좋음
+            contentInput.value = oldContent;
+            scoreInput.value = oldScore;
 
             document.getElementById("modal3").style.display = "flex"; // 모달 띄우기
         }
 
         function confirmEdit() {
-            const input = document.getElementById("editRuleInput");
-            const newText = input.value.trim();
+            const contentInput = document.getElementById("editRuleInput");
+            const scoreInput = document.getElementById("editScoreInput");
+            const newText = contentInput.value.trim();
+            const newScore = scoreInput.value.trim();
 
             if (!newText) {
                 alert("수정할 내용을 입력해주세요.");
                 return;
             }
-
+            if (newScore === "" || isNaN(newScore)) {
+                alert("유효한 점수를 입력해주세요.");
+                return;
+            }
             const item = currentEditItem;
             const ruleId = item.dataset.id;
             const textSpan = item.querySelector(".rule-text");
@@ -847,12 +906,12 @@
             fetch("/update_rule", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: ruleId, content: newText }),
+                body: JSON.stringify({ id: ruleId, content: newText, score: Number(newScore) }),
             })
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
-                    textSpan.textContent = newText;
+                    textSpan.textContent = `${newText} (${newScore}점)`;
                     document.getElementById("toggleSettingsBtn").click(); // 설정 버튼 자동 닫기
                     closeModal("modal3");
                 } else {
@@ -861,6 +920,26 @@
             });
         }
 
+        function openScoreModal(item) {
+            // 선택한 규칙 저장
+            giveScoreItem = item;
+            const modal = document.getElementById('modal4');
+            modal.style.display = 'flex';
+
+            const userListDiv = document.getElementById('userList');
+            userListDiv.innerHTML = ''; // 기존 버튼 제거
+
+            // 서버에서 유저 목록 가져오기
+            fetch("/get_users")
+                .then(res => res.json())
+                .then(users => {
+                    users.forEach(user => {
+                        const btn = document.createElement("button");
+                        btn.textContent = user.username;
+                        userListDiv.appendChild(btn);
+                    });
+                });
+        }
 
 
         function confirmEditEnter(event) {
@@ -869,16 +948,33 @@
             confirmEdit();
           }            
         }
+        function moveToEditScoreEnter(event) {
+          if (event.key === "Enter") {
+            event.preventDefault(); // 폼 제출 방지
+            document.getElementById("editScoreInput").focus(); // 점수 입력칸으로 이동
+          }
+        }
         function submitRuleEnter(event) {//html과 연결할 함수
           if (event.key === "Enter") {
             const input = event.target;
-            submitRule(input);
+            submitRule(
+                document.getElementById("newRuleInput"),
+                document.getElementById("newScoreInput")
+            );
+          }
+        }
+        function moveToScoreEnter(event) {
+          if (event.key === "Enter") {
+            event.preventDefault(); // 폼 제출 방지
+            document.getElementById("newScoreInput").focus(); // 점수 입력칸으로 이동
           }
         }
 
         function handleRuleAddButtonClick() {//html과 연결할 함수
-          const input = document.getElementById("newRuleInput");
-          submitRule(input);
+            submitRule(
+                document.getElementById("newRuleInput"),
+                document.getElementById("newScoreInput")
+            );
         }
         
 		function loadRules() {
@@ -893,7 +989,7 @@
 
                 const textSpan = document.createElement('span');
                 textSpan.className = 'rule-text';
-                textSpan.textContent = rule.content;
+                textSpan.textContent = `${rule.content} (${rule.score}점)`;
 
         		li.appendChild(textSpan);
         		ruleUl.appendChild(li);
