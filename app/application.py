@@ -103,7 +103,7 @@ def give_point():
         return jsonify(success=False, message="포인트가 부족합니다.")
 
     # 포인트 이동
-    users.update_one({"username": from_user}, {"$inc": {"point": amount}})
+    users.update_one({"username": from_user}, {"$inc": {"point": -amount}})
     users.update_one({"username": to_user}, {"$inc": {"point": amount}})
     new_point = sender["point"] - amount
 

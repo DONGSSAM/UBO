@@ -321,8 +321,11 @@
   		gap: 10px;
     	}
 		.modal-footer button {
- 		padding: 6px 12px;
-  		cursor: pointer;
+        padding: 6px 12px;
+        cursor: pointer;
+        margin-top: 8px;
+        margin-bottom: 8px;
+        width: fit-content;
 		}
 
         #ruleList li {
@@ -345,6 +348,21 @@
   		padding: 5px 5px;
 		}
 
+        #userList {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; /* 유저 버튼 사이 간격 */
+            margin-bottom: 20px; /* 닫기 버튼과의 간격 */
+            justify-content: flex-start;
+        }
+
+        #userList button {
+            width: fit-content;      /* 글자 길이에 맞게 버튼 너비 */
+            min-width: 60px;
+            padding: 6px 12px;
+            font-size: 15px;
+            cursor: pointer;
+        }
         .center-image {
             text-align: center;
         }
