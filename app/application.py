@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 app.config['SECRET_KEY'] = "your-very-secret-key"
 
-#user github test
+# github test
 
 check_connection()
 @app.route("/")
