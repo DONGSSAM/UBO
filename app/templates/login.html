@@ -128,7 +128,8 @@
   	<input type="password" name="password" placeholder="비밀번호">
   	<button type="submit">로그인</button>
 	</form>
-    <a href="/signup" class="signup-button">회원가입</a>
+    <a href="/signup_user" class="signup-button">회원가입</a>
+    <a href="/signup_admin" class="signup-button">관리자 회원가입</a>
   </div>
   <div id="overlay"></div>
   <div id="modal">
@@ -136,13 +137,7 @@
     <button id="closeModalButton" onclick="closeModal()">다시 로그인</button>
   </div>
   <script>
-    function login() {
-	  document.addEventListener('keyup', function(event) {
-  	  if (event.key === 'Enter') {
-        document.querySelector('form').submit(); // ← 이 방식이 안전
-  		}
-	  })
-    };
+
     function showModal() {
       document.getElementById("modal").style.display = "block";
       document.getElementById("overlay").style.display = "block";
@@ -154,9 +149,11 @@
     }
 
     // 로그인 실패 시 자동 실행 (Flask에서 실패 정보를 넘겨줬을 때)
-    {% if login_failed %}
-    showModal();
-    {% endif %}
+    document.addEventListener("DOMContentLoaded", function() {
+      {% if login_failed %}
+      showModal();
+      {% endif %}
+    });
   </script>
 </body>
 </html>
