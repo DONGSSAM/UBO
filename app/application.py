@@ -36,11 +36,14 @@ def signUpUser():
 def signUpAdmin():
     return render_template('signup_admin.html')
 
-@app.route("/signupdata", methods=["POST"])
-def register():
+@app.route("/signup_admindata", methods=["POST"])
+def register_admin():
     username = request.form["username"]
     password = request.form["password"]
     role = request.form.get("role")
+
+    if users.find_one({"username": username}):
+        return jsonify(success=False, message="이미 존재하는 아이디입니다.")    
 
     hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
@@ -51,7 +54,33 @@ def register():
         "point": 500,
         "role": role
     })
-    return redirect(url_for("logIn"))
+    return jsonify(success=True, redirect=url_for("logIn"))
+
+@app.route("/signup_userdata", methods=["POST"])
+def register_user():
+    username = request.form["username"]
+    password = request.form["password"]
+    role = request.form.get("role")
+
+    if users.find_one({"username": username}):
+        return jsonify(success=False)    
+
+    hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+
+    users.insert_one({
+        "username": username,
+        "password": hashed_pw,
+        "created_at": datetime.utcnow(),
+        "point": 500,
+        "role": role
+    })
+    return jsonify(success=True, redirect=url_for("logIn"))
+
+@app.route("/check_username", methods=["POST"])
+def check_username():
+    username = request.form["username"]
+    exists = users.find_one({"username": username}) is not None
+    return jsonify(exists=exists)
 
 @app.route("/catchpokemon", methods=["POST"])
 def catch_pokemon():

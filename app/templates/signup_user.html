@@ -63,18 +63,103 @@
       background: #0056b3;
     }	  
     
-      
+    .name-box {
+      position: relative;
+    }
+
+    #username-msg {
+      position: absolute;
+      left: 0;
+      top: 38px; /* 입력칸 높이에 맞게 조정 (예: 38px) */
+      color: red;
+      font-size: 13px;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      z-index: 2;
+      width: 100%;
+      pointer-events: none;
+    }  
+
+    #username {
+      margin-bottom: 19px; /* 입력칸 아래 여백 제거 */
+      position: relative;
+      z-index: 1;
+    }
+
+    #signupBtn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
   </style>
 </head>        
 <body>
   <div class="signup-box">
     <h2>우리반 보약 회원가입</h2>	
-    <form action="/signupdata" method="post">
+    <form id="signupForm">
     <input type="hidden" name="role" value="user">
-  	<input type="text" name="username" placeholder="아이디">
+    <div class="name-box">
+      <input type="text" id="username" name="username" placeholder="아이디(2글자 이상)">
+      <span id="username-msg"></span>
+    </div>
   	<input type="password" name="password" placeholder="비밀번호">
-    <button type="submit">회원가입</button>
+    <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
     </form>
 	</div>
+
+<script>
+  document.getElementById('username').addEventListener('input', function() {
+    const username = this.value;
+    const msgSpan = document.getElementById('username-msg');
+    if (username.length < 2) {
+      msgSpan.textContent = '2글자 이상 입력해주세요.';
+      msgSpan.style.color = 'red';
+      signupBtn.disabled = true;
+      return;
+    }
+    const formData = new FormData();
+    formData.append('username', username);
+
+    fetch('/check_username', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.exists) {
+        msgSpan.textContent = '중복되는 아이디';
+        msgSpan.style.color = 'red';
+      } else {
+        msgSpan.textContent = '사용 가능한 아이디';
+         msgSpan.style.color = 'green';
+        signupBtn.disabled = false;
+      }
+    });
+  });
+  
+  function submitSignup() {
+    const form = document.getElementById('signupForm');
+    const username = form.username.value;
+    if (username.length < 2) {
+      alert('아이디는 2글자 이상이어야 합니다.');
+      return;
+    }
+    const formData = new FormData(form);
+    
+    fetch('/signup_admindata', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && username.length >= 2) {
+        alert('회원가입 성공!');
+        window.location.href = data.redirect;
+       } // 로그인 페이지로 리다이렉트
+    })
+    .catch(error => console.error('Error:', error));
+  }
+</script>
+
 </body>
 </html>
