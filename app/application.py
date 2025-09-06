@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify
 from datetime import datetime
 import sys, bcrypt, qrcode
-from db import users, check_connection, rules
+from db import users, check_connection, rules, chat_rooms
 from bson.objectid import ObjectId
 
 app = Flask(__name__)
@@ -54,6 +54,16 @@ def register_admin():
         "point": 500,
         "role": role
     })
+
+    if role == "admin":
+        chat_rooms.insert_one({
+            "name": f"{username}의 채팅방",
+            "admin_username": username,
+            "created_at": datetime.utcnow(),
+            "users": [],
+            "rules": []
+        })
+
     return jsonify(success=True, redirect=url_for("logIn"))
 
 @app.route("/signup_userdata", methods=["POST"])

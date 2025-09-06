@@ -5,6 +5,7 @@ client = MongoClient(uri)
 db = client['mydatabase']
 users = db['users']
 rules = db['rules']
+chat_rooms = db['chat_rooms']
 
 def check_connection():
     try:
