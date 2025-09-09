@@ -97,13 +97,14 @@
   <div class="signup-box">
     <h2>우리반 보약 회원가입</h2>	
     <form id="signupForm">
-    <input type="hidden" name="role" value="user">
-    <div class="name-box">
-      <input type="text" id="username" name="username" placeholder="아이디(2글자 이상)">
-      <span id="username-msg"></span>
-    </div>
-  	<input type="password" name="password" placeholder="비밀번호">
-    <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
+      <input type="hidden" name="role" value="user">
+      <div class="name-box">
+        <input type="text" id="username" name="username" placeholder="아이디(2글자 이상)">
+        <span id="username-msg"></span>
+      </div>
+      <input type="text" id="password" name="password" placeholder="비밀번호">
+      <input type="text" id="admin" name="admin" placeholder="선생님ID">
+      <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
     </form>
 	</div>
 
@@ -140,13 +141,14 @@
   function submitSignup() {
     const form = document.getElementById('signupForm');
     const username = form.username.value;
+    const admin = form.admin.value;
     if (username.length < 2) {
       alert('아이디는 2글자 이상이어야 합니다.');
       return;
     }
     const formData = new FormData(form);
     
-    fetch('/signup_admindata', {
+    fetch('/signup_userdata', {
       method: 'POST',
       body: formData
     })
@@ -159,6 +161,23 @@
     })
     .catch(error => console.error('Error:', error));
   }
+
+  document.getElementById("username").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      document.getElementById("password").focus();
+    }
+  });
+  document.getElementById("password").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      document.getElementById("admin").focus();
+    }
+  });
+  document.getElementById("admin").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      submitSignup();
+    }
+  });
 </script>
 
 </body>

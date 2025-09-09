@@ -24,6 +24,9 @@ def login():
         session["username"] = username
         session["role"] = user.get("role")
         print("로그인 시 username:", username)
+        if not user.get("approved"):  # 기본값 False
+            print("승인 대기중인 사용자:", username)
+            return render_template("standby.html")
         return redirect("/chat")
     else:
         return render_template("login.html", login_failed=True)
@@ -82,6 +85,7 @@ def register_user():
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
         "point": 500,
+        "approved": False,
         "role": role
     })
     return jsonify(success=True, redirect=url_for("logIn"))
