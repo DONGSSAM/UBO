@@ -366,7 +366,12 @@
         .center-image {
             text-align: center;
         }
-
+        .button-group button {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 14px;
+        }
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
@@ -376,7 +381,12 @@
     <div class="container clearfix"><!-- 컨테이너 박스에 디자인할 요소들 설정해서 배치함 -->
         <div class="chat">
             <div class="chat-header clearfix">
-                <button onclick="openModal('modal1')">학급 규칙 보기</button>
+                <div class="button-group" style="display: flex; flex-direction: column; gap: 5px;">
+                    <button onclick="openModal('modal1')">학급 규칙</button>
+                    {% if role == "admin" %}
+                    <button onclick="openModal('modal5')">승인 요청</button>
+                    {% endif %}
+                </div>
                 <img style="width:60px; border-radius:50px; margin-left:10px;" src="{{ url_for('static', filename='images/logo.png') }}?v=3" alt="moungbo" />
                 <div class="chat-about" style="white-space: pre;">우리반보약</div>
                 <div class="user-info">

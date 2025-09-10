@@ -27,7 +27,7 @@ def login():
         if not user.get("approved"):  # 기본값 False
             print("승인 대기중인 사용자:", username)
             return render_template("standby.html")
-        return redirect("/chat")
+        return redirect(f"/chat/{username}")
     else:
         return render_template("login.html", login_failed=True)
 
@@ -55,7 +55,8 @@ def register_admin():
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
         "point": 500,
-        "role": role
+        "role": role,
+        "approved": True,
     })
 
     if role == "admin":
@@ -73,6 +74,7 @@ def register_admin():
 def register_user():
     username = request.form["username"]
     password = request.form["password"]
+    admin = request.form["admin"]
     role = request.form.get("role")
 
     if users.find_one({"username": username}):
@@ -86,7 +88,9 @@ def register_user():
         "created_at": datetime.utcnow(),
         "point": 500,
         "approved": False,
-        "role": role
+        "role": role,
+        "admin": admin
+
     })
     return jsonify(success=True, redirect=url_for("logIn"))
 
@@ -115,8 +119,8 @@ def catch_pokemon():
     return {"success": True, "new_point": current_point + amount}
     
     
-@app.route("/chat")
-def chat_app():
+@app.route("/chat/<username>")
+def chat_app(username):
     username = session.get("username", None)
     role = session.get("role", None)
     print("채팅방 입장 시 username:", username)
