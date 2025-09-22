@@ -488,6 +488,13 @@
             <button class="close-btn" onclick="closeModal('modal4')">닫기</button>
         </div>
     </div>
+    <div class="modal-overlay" id="modal5" onclick="handleOverlayClick(event, 'modal5')">
+        <div class="modal">
+            <h3 class="modal-header">승인 요청 목록</h3>
+            <div id="approveUserList"></div>
+            <button class="close-btn" onclick="closeModal('modal5')">닫기</button>
+        </div>
+    </div>
 
     <audio id="audioPlayer" controls style="display:none"></audio>
     <!-- 핸들바 템플릿 사용해서 메세지를 동적으로 랜더링하기위한 템플릿 js가 동적으로 메세지를 읽고 붙임 메세지 변수에 담아서 템플릿의 매개변수로 함수실행함 -->
@@ -780,7 +787,10 @@
         })();
 
         function openModal(id) {
-    	document.getElementById(id).style.display = "flex";
+    	    document.getElementById(id).style.display = "flex";
+            if (id === "modal5") {
+                loadApproveUserList();
+            }
   		}
 
   		function closeModal(id) {
@@ -989,6 +999,39 @@
                 });
         }
 
+        function loadApproveUserList() {
+            const adminUsername = "{{ username }}";
+            const approveUserListDiv = document.getElementById('approveUserList');
+            approveUserListDiv.innerHTML = ''; // 기존 버튼 제거
+
+            fetch(`/get_approve_users?admin=${encodeURIComponent(adminUsername)}`)
+                .then(res => res.json())
+                .then(users => {
+                    if (users.length === 0) {
+                        approveUserListDiv.innerHTML = '<p>승인 요청이 없습니다.</p>';
+                        return;
+                    }
+                    users.forEach(user => {
+                        const btn = document.createElement("button");
+                        btn.textContent = user.username;
+                        btn.onclick = async () => {
+                            const res = await fetch("/approve_user", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ userId: user.id })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`${user.username} 승인 완료`);
+                                loadApproveUserList(); // 목록 새로고침
+                            } else {
+                                alert("승인 실패");
+                            }
+                        };
+                        approveUserListDiv.appendChild(btn);
+                    });
+                });
+        }
 
         function confirmEditEnter(event) {
           if (event.key === "Enter") {
