@@ -688,10 +688,11 @@
             		return koreanEntry ? koreanEntry.name : "(이름 없음)";
                 },
                 catchPokemon: async function(username, amount) {
+                    const admin = "{{ room_name }}"; // 템플릿 변수로 현재 채팅방 관리자 이름 전달
                     const res = await fetch("/catchpokemon", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, amount })
+                    body: JSON.stringify({ username, amount, admin })//admin추가
                 	});
                     const result = await res.json();
                     if (result.success) {

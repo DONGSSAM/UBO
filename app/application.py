@@ -54,7 +54,6 @@ def register_admin():
         "username": username,
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
-        "point": 500,
         "role": role,
         "approved": True,
     })
@@ -62,8 +61,9 @@ def register_admin():
     if role == "admin":
         chat_rooms.insert_one({
             "name": f"{username}의 채팅방",
-            "admin_username": username,
+            "admin_name": username,
             "created_at": datetime.utcnow(),
+            "point": 5000,
             "users": [],
             "rules": []
         })
@@ -86,17 +86,17 @@ def register_user():
         "username": username,
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
-        "point": 500,
         "approved": False,
         "role": role,
-        "admin": admin
+        "chat_rooms": [admin]
     })
     chat_rooms.update_one(
-        {"admin_username": admin},
-        {"$push": {"users": username}}
+        {"admin_name": admin},
+        {"$push": {"users": {"username": username, "point": 500}}}
     )
     return jsonify(success=True, redirect=url_for("logIn"))
 
+#아이디가 중복되는지 확인하는 코드
 @app.route("/check_username", methods=["POST"])
 def check_username():
     username = request.form["username"]
@@ -105,19 +105,27 @@ def check_username():
 
 @app.route("/catchpokemon", methods=["POST"])
 def catch_pokemon():
-    data = request.get_json()
+    data = request.get_json()#채팅방 정보에서 username amount admin를 json형태로 받음
     username = data["username"]
     amount = data["amount"]
-    user = users.find_one({"username": username})
-    if not user:
+    admin = data.get("admin")  # 어떤 채팅방(관리자)에서 포인트를 변경할지 프론트에서 전달해야 함
+
+    chat_room = chat_rooms.find_one({"admin_name": admin})
+    if not chat_room:
+        return {"success": False, "message": "채팅방 없음"}, 404
+
+    user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
+    if not user_info:
         return {"success": False, "message": "사용자 없음"}, 404
 
-    current_point = user.get("point", 0)
+    current_point = user_info.get("point", 0)
     if current_point + amount < 0:
         return {"success": False, "message": "포인트가 부족해."}, 400
-    users.update_one(
-        {"username": username},
-        {"$inc": {"point": amount}}
+
+    # users 배열에서 해당 유저의 포인트 업데이트
+    chat_rooms.update_one(
+        {"admin_name": admin, "users.username": username},
+        {"$inc": {"users.$.point": amount}}
     )
     return {"success": True, "new_point": current_point + amount}
     
@@ -157,8 +165,27 @@ def chat_app(room_name):
     user = users.find_one({"username": session_username})
     if not user:
         return redirect("/")
-
-    point = user.get("point", 0)
+    # 채팅방 이름 결정
+    if role == "admin":
+        room_name = session_username   # 관리자는 자기 이름이 채팅방 이름
+    elif role == "user":
+        #chat_rooms 배열에서 첫 번째 채팅방 선택 (또는 UI로 선택)
+        chat_rooms_list = user.get("chat_rooms", [])
+        if not chat_rooms_list:
+            return render_template("select_admin.html")  # 채팅방이 없으면 선택/입력 페이지로
+        room_name = chat_rooms_list[0]  # 여러 개면 첫 번째, 또는 선택
+    else:
+        return "권한 없음", 403
+    
+    chat_room = chat_rooms.find_one({"admin_name": room_name})
+    point = 0
+    if role =="admin":
+        point = chat_room.get("point", 0) if chat_room else 0
+    elif role =="user":
+        if chat_room:
+            user_info = next((u for u in chat_room.get("users", []) if u.get("username") == session_username), None)
+            if user_info:
+                point = user_info.get("point", 0)
 
     return render_template("chat.html", 
                            username=session_username, 
@@ -171,7 +198,7 @@ def get_approve_users():
     admin = request.args.get("admin")
     # 조건: admin 필드가 현재 관리자 username이고, approved가 False인 유저만
     user_list = list(users.find(
-        {"role": "user", "admin": admin, "approved": False},
+        {"role": "user", "chat_rooms": admin, "approved": False},
         {"_id": 1, "username": 1}
     ))
     for user in user_list:
@@ -258,7 +285,7 @@ def add_rule():
         score = int(data.get("score", 0))
     except (TypeError, ValueError):
         score = 0
-    admin_username = session.get("username")
+    admin_name = session.get("username")
 
     if content:
         rule_doc = {
@@ -271,7 +298,7 @@ def add_rule():
         rule_doc["_id"] = rule_id
 
         chat_rooms.update_one(
-            {"admin_username": admin_username},
+            {"admin_name": admin_name},
             {"$push": {"rules": rule_doc}}
         )
         return jsonify(success=True, id=rule_id, rule=rule_doc)
