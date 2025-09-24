@@ -254,14 +254,27 @@ def give_score():
 def add_rule():
     data = request.get_json()
     content = data.get("content", "").strip()
-    score = data.get("score", None)
+    try:
+        score = int(data.get("score", 0))
+    except (TypeError, ValueError):
+        score = 0
+    admin_username = session.get("username")
+
     if content:
-        result = rules.insert_one({
+        rule_doc = {
             "content": content,
             "score": score,
-            "created_at": datetime.now()#관리자 유저 이름 기반으로 채팅방 나누고 관리자마다 관리하는 학생, 채팅방 규칙 데이터베이스에 저장하기
-        })
-        return jsonify(success=True, id=str(result.inserted_id))
+            "created_at": datetime.utcnow()
+        }
+        result = rules.insert_one(rule_doc)#관리자 유저 이름 기반으로 채팅방 나누고 관리자마다 관리하는 학생, 채팅방 규칙 데이터베이스에 저장하기
+        rule_id = str(result.inserted_id)
+        rule_doc["_id"] = rule_id
+
+        chat_rooms.update_one(
+            {"admin_username": admin_username},
+            {"$push": {"rules": rule_doc}}
+        )
+        return jsonify(success=True, id=rule_id, rule=rule_doc)
     return jsonify(success=False, message="빈 규칙입니다.")
 
 @app.route("/get_rules")
