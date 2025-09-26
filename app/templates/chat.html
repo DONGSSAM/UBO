@@ -1016,10 +1016,11 @@
                         const btn = document.createElement("button");
                         btn.textContent = user.username;
                         btn.onclick = async () => {
+                            const admin = "{{ username }}"; // 현재 관리자 이름(채팅방 이름)
                             const res = await fetch("/approve_user", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ userId: user.id })
+                                body: JSON.stringify({ username: user.username, admin }) // username과 admin 전달
                             });
                             const data = await res.json();
                             if (data.success) {

@@ -24,7 +24,18 @@ def login():
         session["username"] = username
         session["role"] = user.get("role")
         print("로그인 시 username:", username)
-        if not user.get("approved"):  # 기본값 False
+        # chat_rooms에서 해당 유저의 approved 상태 확인
+        chat_rooms_list = user.get("chat_rooms", [])
+        approved = True
+        for room_name in chat_rooms_list:
+            chat_room = chat_rooms.find_one({"admin_name": room_name})
+            if chat_room:
+                user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
+                if user_info and not user_info.get("approved", False):
+                    approved = False
+                    break
+
+        if not approved:
             print("승인 대기중인 사용자:", username)
             return render_template("standby.html")
         return redirect(f"/chat")
@@ -86,13 +97,12 @@ def register_user():
         "username": username,
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
-        "approved": False,
         "role": role,
         "chat_rooms": [admin]
     })
     chat_rooms.update_one(
         {"admin_name": admin},
-        {"$push": {"users": {"username": username, "point": 500}}}
+        {"$push": {"users": {"username": username, "point": 500, "approved": False}}}
     )
     return jsonify(success=True, redirect=url_for("logIn"))
 
@@ -116,7 +126,7 @@ def catch_pokemon():
 
     user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
     if not user_info:
-        return {"success": False, "message": "사용자 없음"}, 404
+        return {"success": False, "message": "관리자는 던질 수 없어."}, 404
 
     current_point = user_info.get("point", 0)
     if current_point + amount < 0:
@@ -142,13 +152,9 @@ def chat_redirect():
     if not user:
         return redirect("/")
 
-    # 채팅방 이름 결정
-    if role == "admin":
-        room_name = session_username   # 관리자는 자기 이름이 채팅방 이름
-    elif role == "user":
-        room_name = user.get("admin")  # 유저는 admin 필드 값이 채팅방 이름
-    else:
-        return "권한 없음", 403
+    room_name = get_room_name(user, role, session_username)
+    if not room_name:
+        return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
 
     # 최종적으로 같은 주소로 이동
     return redirect(f"/chat/{room_name}")
@@ -165,17 +171,9 @@ def chat_app(room_name):
     user = users.find_one({"username": session_username})
     if not user:
         return redirect("/")
-    # 채팅방 이름 결정
-    if role == "admin":
-        room_name = session_username   # 관리자는 자기 이름이 채팅방 이름
-    elif role == "user":
-        #chat_rooms 배열에서 첫 번째 채팅방 선택 (또는 UI로 선택)
-        chat_rooms_list = user.get("chat_rooms", [])
-        if not chat_rooms_list:
-            return render_template("select_admin.html")  # 채팅방이 없으면 선택/입력 페이지로
-        room_name = chat_rooms_list[0]  # 여러 개면 첫 번째, 또는 선택
-    else:
-        return "권한 없음", 403
+    room_name = get_room_name(user, role, session_username)
+    if not room_name:
+        return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
     
     chat_room = chat_rooms.find_one({"admin_name": room_name})
     point = 0
@@ -193,29 +191,42 @@ def chat_app(room_name):
                            role=role, 
                            room_name=room_name)
 
+def get_room_name(user, role, session_username):
+    if role == "admin":
+        return session_username
+    elif role == "user":
+        chat_rooms_list = user.get("chat_rooms", [])
+        if not chat_rooms_list:
+            return None
+        return chat_rooms_list[0]
+    else:
+        return "권한 없음", 403
+
 @app.route('/get_approve_users')
 def get_approve_users():
     admin = request.args.get("admin")
+    chat_room = chat_rooms.find_one({"admin_name": admin})
     # 조건: admin 필드가 현재 관리자 username이고, approved가 False인 유저만
-    user_list = list(users.find(
-        {"role": "user", "chat_rooms": admin, "approved": False},
-        {"_id": 1, "username": 1}
-    ))
-    for user in user_list:
-        user["id"] = str(user["_id"])
-        del user["_id"]
+    user_list = []
+    for user in chat_room.get("users", []):
+        if not user.get("approved", False):
+            user_list.append({
+                "username": user["username"],
+                "point": user.get("point", 0)
+            })
     return jsonify(user_list)
 
 @app.route('/approve_user', methods=['POST'])
 def approve_user():
     data = request.get_json()
-    user_id = data.get('userId')
-    if not user_id:
-        return jsonify(success=False, message="userId 없음"), 400
+    username = data.get('username')
+    admin = data.get('admin')
+    if not username or not admin:
+        return jsonify(success=False, message="username 또는 admin 없음"), 400
 
-    result = users.update_one(
-        {"_id": ObjectId(user_id)},
-        {"$set": {"approved": True}}
+    result = chat_rooms.update_one(#채팅방 데이터에서 approved 수정
+        {"admin_name": admin, "users.username": username},
+        {"$set": {"users.$.approved": True}}
     )
     if result.modified_count == 1:
         return jsonify(success=True)
