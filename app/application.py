@@ -111,7 +111,6 @@ def register_user():
 def check_username():
     username = request.form["username"]
     exists = users.find_one({"username": username}) is not None
-<<<<<<< HEAD
     return jsonify(exists=exists)  
     
 @app.route("/chat")
@@ -208,9 +207,6 @@ def approve_user():
         return jsonify(success=False, message="승인 실패")
 
 # 포인트 관련 코드
-=======
-    return jsonify(exists=exists)
->>>>>>> b1bb98072321a08295a3f0702157a46160020d6b
 
 @app.route("/catchpokemon", methods=["POST"])
 def catch_pokemon():
@@ -237,103 +233,6 @@ def catch_pokemon():
         {"$inc": {"users.$.point": amount}}
     )
     return {"success": True, "new_point": current_point + amount}
-<<<<<<< HEAD
-=======
-    
-    
-@app.route("/chat")
-def chat_redirect():
-    session_username = session.get("username")
-    role = session.get("role")
-
-    if not session_username:
-        return redirect("/")
-
-    user = users.find_one({"username": session_username})
-    if not user:
-        return redirect("/")
-
-    room_name = get_room_name(user, role, session_username)
-    if not room_name:
-        return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
-
-    # 최종적으로 같은 주소로 이동
-    return redirect(f"/chat/{room_name}")
-
-
-@app.route("/chat/<room_name>")
-def chat_app(room_name):
-    session_username = session.get("username")
-    role = session.get("role")
-
-    if not session_username:
-        return redirect("/")
-
-    user = users.find_one({"username": session_username})
-    if not user:
-        return redirect("/")
-    room_name = get_room_name(user, role, session_username)
-    if not room_name:
-        return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
-    
-    chat_room = chat_rooms.find_one({"admin_name": room_name})
-    point = 0
-    if role =="admin":
-        point = chat_room.get("point", 0) if chat_room else 0
-    elif role =="user":
-        if chat_room:
-            user_info = next((u for u in chat_room.get("users", []) if u.get("username") == session_username), None)
-            if user_info:
-                point = user_info.get("point", 0)
-
-    return render_template("chat.html", 
-                           username=session_username, 
-                           point=point, 
-                           role=role, 
-                           room_name=room_name)
-
-def get_room_name(user, role, session_username):
-    if role == "admin":
-        return session_username
-    elif role == "user":
-        chat_rooms_list = user.get("chat_rooms", [])
-        if not chat_rooms_list:
-            return None
-        return chat_rooms_list[0]
-    else:
-        return "권한 없음", 403
-
-@app.route('/get_approve_users')
-def get_approve_users():
-    admin = request.args.get("admin")
-    chat_room = chat_rooms.find_one({"admin_name": admin})
-    # 조건: admin 필드가 현재 관리자 username이고, approved가 False인 유저만
-    user_list = []
-    for user in chat_room.get("users", []):
-        if not user.get("approved", False):
-            user_list.append({
-                "username": user["username"],
-                "point": user.get("point", 0)
-            })
-    return jsonify(user_list)
-
-@app.route('/approve_user', methods=['POST'])
-def approve_user():
-    data = request.get_json()
-    username = data.get('username')
-    admin = data.get('admin')
-    if not username or not admin:
-        return jsonify(success=False, message="username 또는 admin 없음"), 400
-
-    result = chat_rooms.update_one(#채팅방 데이터에서 approved 수정
-        {"admin_name": admin, "users.username": username},
-        {"$set": {"users.$.approved": True}}
-    )
-    if result.modified_count == 1:
-        return jsonify(success=True)
-    else:
-        return jsonify(success=False, message="승인 실패")
->>>>>>> b1bb98072321a08295a3f0702157a46160020d6b
 
 @app.route("/give_point", methods=["POST"])
 def give_point():
@@ -350,19 +249,47 @@ def give_point():
     if from_user == to_user:
         return jsonify(success=False, message="자기 자신에게는 줄 수 없어")
 
-    sender = users.find_one({"username": from_user})
-    receiver = users.find_one({"username": to_user})
-
+    #주는 사람이 admin인지 확인
+    if from_user == admin:
+        sender = admin
+        receiver = next((u for u in chat_room.get("users", []) if u.get("username") == to_user), None)
+        point = chat_room.get("point", 0)
+        if not receiver:
+         return jsonify(success=False, message=f"{to_user} 님은 없어.")
+        if point < amount:
+            return jsonify(success=False, message="포인트가 부족합니다.")
+        chat_rooms.update_one(
+            {"admin_name": admin, "users.username": to_user},
+            {"$inc": {"users.$.point": amount}}
+        )
+        chat_rooms.update_one(
+            {"admin_name": admin},
+            {"$inc": {"point": -amount}}
+        )
+        new_point = point - amount
+        return jsonify(success=True, message=f"관리자가 {to_user}님에게 {amount}포인트를 전달했어요!", new_point=new_point)
+    #주는 사람이 user인지 확인
+    else:#sender와 receiver 정보 가져오기 딕셔너리형태로 가져와서 sender[username]올바르게 조회해야함
+        sender = next((u for u in chat_room.get("users", []) if u.get("username") == from_user), None)
+        receiver = next((u for u in chat_room.get("users", []) if u.get("username") == to_user), None)
+    
+    point = sender["point"] if sender else 0
     if not receiver:
         return jsonify(success=False, message=f"{to_user} 님은 없어.")
 
-    if sender["point"] < amount:
+    if point < amount:
         return jsonify(success=False, message="포인트가 부족합니다.")
-
-    # 포인트 이동
-    users.update_one({"username": from_user}, {"$inc": {"point": -amount}})
-    users.update_one({"username": to_user}, {"$inc": {"point": amount}})
-    new_point = sender["point"] - amount
+    # 1) sender 포인트 차감
+    chat_rooms.update_one(
+        {"admin_name": admin, "users.username": sender["username"]},
+        {"$inc": {"users.$.point": -amount}}
+    )
+    # 2) receiver 포인트 증가
+    chat_rooms.update_one(
+        {"admin_name": admin, "users.username": receiver["username"]},
+        {"$inc": {"users.$.point": amount}}
+    )
+    new_point = point - amount#새로운 점수 계산
 
     return jsonify(success=True, message=f"{to_user}님에게 {amount}포인트를 전달했어요!", new_point=new_point)
 
