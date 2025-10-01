@@ -738,7 +738,8 @@
     							headers: { "Content-Type": "application/json" },
     							body: JSON.stringify({
         						to: targetName,
-        						amount: givingPoint  // 원하는 포인트 양을 추가
+        						amount: givingPoint,  // 원하는 포인트 양을 추가
+                                admin: "{{ room_name }}" // 템플릿 변수로 현재 채팅방 관리자 이름 전달
     								})
 								});
         					const result = await res.json();
@@ -1000,7 +1001,7 @@
                 });
         }
 
-        function loadApproveUserList() {
+        function loadApproveUserList() { // 로그인한 사람이 admin일때 모달이 뜨게해서 모달이 뜬사람의 로그인정보 활용한거임
             const adminUsername = "{{ username }}";
             const approveUserListDiv = document.getElementById('approveUserList');
             approveUserListDiv.innerHTML = ''; // 기존 버튼 제거
@@ -1016,7 +1017,7 @@
                         const btn = document.createElement("button");
                         btn.textContent = user.username;
                         btn.onclick = async () => {
-                            const admin = "{{ username }}"; // 현재 관리자 이름(채팅방 이름)
+                            const admin = "{{ username }}"; // 현재 로그인한 관리자 이름(채팅방 이름)
                             const res = await fetch("/approve_user", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },

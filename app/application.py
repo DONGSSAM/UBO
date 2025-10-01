@@ -111,34 +111,7 @@ def register_user():
 def check_username():
     username = request.form["username"]
     exists = users.find_one({"username": username}) is not None
-    return jsonify(exists=exists)
-
-@app.route("/catchpokemon", methods=["POST"])
-def catch_pokemon():
-    data = request.get_json()#채팅방 정보에서 username amount admin를 json형태로 받음
-    username = data["username"]
-    amount = data["amount"]
-    admin = data.get("admin")  # 어떤 채팅방(관리자)에서 포인트를 변경할지 프론트에서 전달해야 함
-
-    chat_room = chat_rooms.find_one({"admin_name": admin})
-    if not chat_room:
-        return {"success": False, "message": "채팅방 없음"}, 404
-
-    user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
-    if not user_info:
-        return {"success": False, "message": "관리자는 던질 수 없어."}, 404
-
-    current_point = user_info.get("point", 0)
-    if current_point + amount < 0:
-        return {"success": False, "message": "포인트가 부족해."}, 400
-
-    # users 배열에서 해당 유저의 포인트 업데이트
-    chat_rooms.update_one(
-        {"admin_name": admin, "users.username": username},
-        {"$inc": {"users.$.point": amount}}
-    )
-    return {"success": True, "new_point": current_point + amount}
-    
+    return jsonify(exists=exists)  
     
 @app.route("/chat")
 def chat_redirect():
@@ -198,7 +171,7 @@ def get_room_name(user, role, session_username):
         chat_rooms_list = user.get("chat_rooms", [])
         if not chat_rooms_list:
             return None
-        return chat_rooms_list[0]
+        return chat_rooms_list[0]#채팅방 리스트 중에 첫번째로 이동함 나중에 채팅방 여러개면 선택하는 페이지 만들기
     else:
         return "권한 없음", 403
 
@@ -233,12 +206,43 @@ def approve_user():
     else:
         return jsonify(success=False, message="승인 실패")
 
+# 포인트 관련 코드
+
+@app.route("/catchpokemon", methods=["POST"])
+def catch_pokemon():
+    data = request.get_json()#채팅방 정보에서 username amount admin를 json형태로 받음
+    username = data["username"]
+    amount = data["amount"]
+    admin = data.get("admin")  # 어떤 채팅방(관리자)에서 포인트를 변경할지 프론트에서 전달해야 함
+
+    chat_room = chat_rooms.find_one({"admin_name": admin})
+    if not chat_room:
+        return {"success": False, "message": "채팅방 없음"}, 404
+
+    user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
+    if not user_info:
+        return {"success": False, "message": "관리자는 던질 수 없어."}, 404
+
+    current_point = user_info.get("point", 0)
+    if current_point + amount < 0:
+        return {"success": False, "message": "포인트가 부족해."}, 400
+
+    # users 배열에서 해당 유저의 포인트 업데이트
+    chat_rooms.update_one(
+        {"admin_name": admin, "users.username": username},
+        {"$inc": {"users.$.point": amount}}
+    )
+    return {"success": True, "new_point": current_point + amount}
+
 @app.route("/give_point", methods=["POST"])
 def give_point():
     data = request.get_json()
     to_user = data.get("to")
     from_user = session.get("username")
     amount = data.get("amount", 0)
+    admin = data.get("admin")  # 어떤 채팅방(관리자)에서 포인트를 이동할지 프론트에서 전달해야 함
+
+    chat_room = chat_rooms.find_one({"admin_name": admin})#데이터베이스에서 채팅방 가져오기
     if not from_user or not to_user or amount <= 0:
         return jsonify(success=False, message="잘못된 요청이야.")
 
