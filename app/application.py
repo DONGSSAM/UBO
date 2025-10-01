@@ -111,6 +111,7 @@ def register_user():
 def check_username():
     username = request.form["username"]
     exists = users.find_one({"username": username}) is not None
+<<<<<<< HEAD
     return jsonify(exists=exists)  
     
 @app.route("/chat")
@@ -207,6 +208,9 @@ def approve_user():
         return jsonify(success=False, message="승인 실패")
 
 # 포인트 관련 코드
+=======
+    return jsonify(exists=exists)
+>>>>>>> b1bb98072321a08295a3f0702157a46160020d6b
 
 @app.route("/catchpokemon", methods=["POST"])
 def catch_pokemon():
@@ -233,6 +237,103 @@ def catch_pokemon():
         {"$inc": {"users.$.point": amount}}
     )
     return {"success": True, "new_point": current_point + amount}
+<<<<<<< HEAD
+=======
+    
+    
+@app.route("/chat")
+def chat_redirect():
+    session_username = session.get("username")
+    role = session.get("role")
+
+    if not session_username:
+        return redirect("/")
+
+    user = users.find_one({"username": session_username})
+    if not user:
+        return redirect("/")
+
+    room_name = get_room_name(user, role, session_username)
+    if not room_name:
+        return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
+
+    # 최종적으로 같은 주소로 이동
+    return redirect(f"/chat/{room_name}")
+
+
+@app.route("/chat/<room_name>")
+def chat_app(room_name):
+    session_username = session.get("username")
+    role = session.get("role")
+
+    if not session_username:
+        return redirect("/")
+
+    user = users.find_one({"username": session_username})
+    if not user:
+        return redirect("/")
+    room_name = get_room_name(user, role, session_username)
+    if not room_name:
+        return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
+    
+    chat_room = chat_rooms.find_one({"admin_name": room_name})
+    point = 0
+    if role =="admin":
+        point = chat_room.get("point", 0) if chat_room else 0
+    elif role =="user":
+        if chat_room:
+            user_info = next((u for u in chat_room.get("users", []) if u.get("username") == session_username), None)
+            if user_info:
+                point = user_info.get("point", 0)
+
+    return render_template("chat.html", 
+                           username=session_username, 
+                           point=point, 
+                           role=role, 
+                           room_name=room_name)
+
+def get_room_name(user, role, session_username):
+    if role == "admin":
+        return session_username
+    elif role == "user":
+        chat_rooms_list = user.get("chat_rooms", [])
+        if not chat_rooms_list:
+            return None
+        return chat_rooms_list[0]
+    else:
+        return "권한 없음", 403
+
+@app.route('/get_approve_users')
+def get_approve_users():
+    admin = request.args.get("admin")
+    chat_room = chat_rooms.find_one({"admin_name": admin})
+    # 조건: admin 필드가 현재 관리자 username이고, approved가 False인 유저만
+    user_list = []
+    for user in chat_room.get("users", []):
+        if not user.get("approved", False):
+            user_list.append({
+                "username": user["username"],
+                "point": user.get("point", 0)
+            })
+    return jsonify(user_list)
+
+@app.route('/approve_user', methods=['POST'])
+def approve_user():
+    data = request.get_json()
+    username = data.get('username')
+    admin = data.get('admin')
+    if not username or not admin:
+        return jsonify(success=False, message="username 또는 admin 없음"), 400
+
+    result = chat_rooms.update_one(#채팅방 데이터에서 approved 수정
+        {"admin_name": admin, "users.username": username},
+        {"$set": {"users.$.approved": True}}
+    )
+    if result.modified_count == 1:
+        return jsonify(success=True)
+    else:
+        return jsonify(success=False, message="승인 실패")
+>>>>>>> b1bb98072321a08295a3f0702157a46160020d6b
 
 @app.route("/give_point", methods=["POST"])
 def give_point():

@@ -1001,7 +1001,11 @@
                 });
         }
 
+<<<<<<< HEAD
         function loadApproveUserList() { // 로그인한 사람이 admin일때 모달이 뜨게해서 모달이 뜬사람의 로그인정보 활용한거임
+=======
+        function loadApproveUserList() {
+>>>>>>> b1bb98072321a08295a3f0702157a46160020d6b
             const adminUsername = "{{ username }}";
             const approveUserListDiv = document.getElementById('approveUserList');
             approveUserListDiv.innerHTML = ''; // 기존 버튼 제거
@@ -1017,7 +1021,11 @@
                         const btn = document.createElement("button");
                         btn.textContent = user.username;
                         btn.onclick = async () => {
+<<<<<<< HEAD
                             const admin = "{{ username }}"; // 현재 로그인한 관리자 이름(채팅방 이름)
+=======
+                            const admin = "{{ username }}"; // 현재 관리자 이름(채팅방 이름)
+>>>>>>> b1bb98072321a08295a3f0702157a46160020d6b
                             const res = await fetch("/approve_user", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
