@@ -15,7 +15,7 @@
         @font-face {
             font-family: 'NanumGothic';
             font-style: normal;
-            src: url("/fonts/NanumGothic-Regular.ttf");
+            src: url("/static/fonts/NanumGothic-Regular.ttf");
         }
 
         *,
@@ -311,7 +311,7 @@
     	.modal-footer {
       	margin-top: 15px;
       	padding: 5px 10px;
-      	background: #007bff;
+      	background: white;
       	color: white;
       	border: none;
       	border-radius: 5px;
@@ -321,23 +321,57 @@
   		gap: 10px;
     	}
 		.modal-footer button {
- 		padding: 6px 12px;
-  		cursor: pointer;
+        padding: 6px 12px;
+        cursor: pointer;
+        margin-top: 8px;
+        margin-bottom: 8px;
+        width: fit-content;
 		}
 
-    	.modal-footer:hover {
-     	background: #0056b3;
-    	}
-            
+        #ruleList li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 10px;
+        }
+
+        .rule-text {
+        flex: 1;
+        }
+
+        .rule-actions {
+        margin-left: 8px;
+        }        
+
         .user {
   		color: #6a1b9a;
   		padding: 5px 5px;
 		}
 
+        #userList {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; /* 유저 버튼 사이 간격 */
+            margin-bottom: 20px; /* 닫기 버튼과의 간격 */
+            justify-content: flex-start;
+        }
+
+        #userList button {
+            width: fit-content;      /* 글자 길이에 맞게 버튼 너비 */
+            min-width: 60px;
+            padding: 6px 12px;
+            font-size: 15px;
+            cursor: pointer;
+        }
         .center-image {
             text-align: center;
         }
-
+        .button-group button {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 14px;
+        }
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
@@ -347,7 +381,12 @@
     <div class="container clearfix"><!-- 컨테이너 박스에 디자인할 요소들 설정해서 배치함 -->
         <div class="chat">
             <div class="chat-header clearfix">
-                <button onclick="openModal('modal1')">학급 규칙 보기</button>
+                <div class="button-group" style="display: flex; flex-direction: column; gap: 5px;">
+                    <button onclick="openModal('modal1')">학급 규칙</button>
+                    {% if role == "admin" %}
+                    <button onclick="openModal('modal5')">승인 요청</button>
+                    {% endif %}
+                </div>
                 <img style="width:60px; border-radius:50px; margin-left:10px;" src="{{ url_for('static', filename='images/logo.png') }}?v=3" alt="moungbo" />
                 <div class="chat-about" style="white-space: pre;">우리반보약</div>
                 <div class="user-info">
@@ -377,16 +416,17 @@
   		<div class="modal" >
     		<div class="modal-header">
       			<h2>학급 규칙</h2>
-      			<button id="toggleSettingsBtn">설정</button>
+      			<button id="toggleSettingsBtn" onclick="toggleEditMode()">설정</button>
     		</div>
     	<ul id="ruleList">
     	</ul>
     		<div class="modal-footer">
       			<button onclick="closeModal('modal1')">닫기</button>
-      			<button onclick="openModal('modal2')">규칙 추가</button>
+      			<button id="addRule" onclick="openModal('modal2')">규칙 추가</button>
     		</div>
   		</div>
 	</div>
+
     <div class="modal-overlay" id="modal2" onclick="handleOverlayClick(event, 'modal2')">
   		<div class="modal">
     	<h2 class="modal-header">규칙 추가</h2>
@@ -394,15 +434,68 @@
       	type="text"
       	id="newRuleInput"
       	placeholder="새로운 규칙 입력"
-      	onkeydown="handleKeyDown(event)"
+      	onkeydown="moveToScoreEnter(event)"
       	style="width:100%; margin-bottom:10px;"
     	>
+
+        <input
+        type="number"
+        id="newScoreInput"
+        placeholder="점수 입력"
+        min="0"
+        onkeydown="submitRuleEnter(event)"
+        style="width:100%; margin-bottom:10px;"
+        >
+
         <div class="modal-footer">
         	<button class="close-btn" onclick="handleRuleAddButtonClick()">추가</button>
     		<button class="close-btn" onclick="closeModal('modal2')">닫기</button>
         </div>
   		</div>
 	</div>
+
+    <div class="modal-overlay" id="modal3" onclick="handleOverlayClick(event, 'modal3')">
+        <div class="modal">
+            <h2 class="modal-header">규칙 수정</h2>
+            <input
+            type="text"
+            id="editRuleInput" 
+        
+            onkeydown="moveToEditScoreEnter(event)"
+            style="width:100%; margin-bottom:10px;"
+            > <!-- ★ 기존 newRuleInput → editRuleInput로 변경 -->
+            
+            <input
+            type="number"
+            id="editScoreInput"
+            
+            min="0"
+            onkeydown="confirmEditEnter(event)"
+            style="width:100%; margin-bottom:10px;"
+            >
+            <div class="modal-footer">
+            <button class="close-btn" onclick="confirmEdit()">수정</button> <!-- 기존 handleRuleAddButtonClick → confirmEdit -->
+            <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal4" onclick="handleOverlayClick(event, 'modal4')">
+        <div class="modal">
+            <h3 class="modal-header">점수 부여</h3>
+            <div id="userList"></div>
+
+            <button class="close-btn" onclick="closeModal('modal4')">닫기</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modal5" onclick="handleOverlayClick(event, 'modal5')">
+        <div class="modal">
+            <h3 class="modal-header">승인 요청 목록</h3>
+            <div id="approveUserList"></div>
+            <button class="close-btn" onclick="closeModal('modal5')">닫기</button>
+        </div>
+    </div>
+
     <audio id="audioPlayer" controls style="display:none"></audio>
     <!-- 핸들바 템플릿 사용해서 메세지를 동적으로 랜더링하기위한 템플릿 js가 동적으로 메세지를 읽고 붙임 메세지 변수에 담아서 템플릿의 매개변수로 함수실행함 -->
      <script id="message-template" type="text/x-handlebars-template"> 
@@ -595,10 +688,11 @@
             		return koreanEntry ? koreanEntry.name : "(이름 없음)";
                 },
                 catchPokemon: async function(username, amount) {
+                    const admin = "{{ room_name }}"; // 템플릿 변수로 현재 채팅방 관리자 이름 전달
                     const res = await fetch("/catchpokemon", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, amount })
+                    body: JSON.stringify({ username, amount, admin })//admin추가
                 	});
                     const result = await res.json();
                     if (result.success) {
@@ -644,7 +738,8 @@
     							headers: { "Content-Type": "application/json" },
     							body: JSON.stringify({
         						to: targetName,
-        						amount: givingPoint  // 원하는 포인트 양을 추가
+        						amount: givingPoint,  // 원하는 포인트 양을 추가
+                                admin: "{{ room_name }}" // 템플릿 변수로 현재 채팅방 관리자 이름 전달
     								})
 								});
         					const result = await res.json();
@@ -692,53 +787,288 @@
             chat.init();//채팅기능 초기화 실행, 드래그앤드롭기능 설정 실행
             chat.initDragAndDrop();
         })();
-        
+
         function openModal(id) {
-    	document.getElementById(id).style.display = "flex";
+    	    document.getElementById(id).style.display = "flex";
+            if (id === "modal5") {
+                loadApproveUserList();
+            }
   		}
 
   		function closeModal(id) {
     		document.getElementById(id).style.display = "none";
+            currentEditItem = null;
   		}
-		function handleOverlayClick(event, modalId) {
+		function handleOverlayClick(event, modalId) {//배경을 클릭했을 때 화면 닫기
   			if (event.target === event.currentTarget) {
     			closeModal(modalId);
   			}
 		}
-        function submitRule(input) {
-          const newRule = input.value.trim();
-          if (newRule === "") return;
+        const role = "{{ role }}";
+        if (role !== "admin") {
+            document.getElementById("addRule").style.display = "none";
+            document.getElementById("toggleSettingsBtn").style.display = "none";
+        }
+        function submitRule(ruleInput, scoreInput) {//서버에 규칙 제출
+          const newRule = ruleInput.value.trim();
+          const newScore = scoreInput.value.trim();
+          if (newRule === "" || newScore === "") return;
 
           const ruleList = document.getElementById("ruleList");
           const newItem = document.createElement("li");
-          newItem.textContent = newRule;
+
+          const textSpan = document.createElement("span");
+          textSpan.className = "rule-text";
+          textSpan.textContent = `${newRule} (${newScore}점)`;
+          newItem.appendChild(textSpan);   //li에 text적힌 span 추가
+
           ruleList.appendChild(newItem);
-          input.value = "";
+          ruleInput.value = "";
+          scoreInput.value = "";
           closeModal("modal2");
 
-          fetch("/add_rule", {
+          fetch("/add_rule", {//서버에 전달
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: newRule })
+            body: JSON.stringify({ content: newRule, score: Number(newScore) })
           })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              addRuleToDOM(newRule); // DOM에 추가하는 함수가 있다면
+                newItem.setAttribute("data-id", data.id); // ← ★ id를 li에 저장
+                loadRules();
             }
           });
         }
+        let currentEditItem = null;//li 저장용 변수        
+        let editMode = false;
+        
+        function toggleEditMode() {//수정모드 수정할 때 필요한 코드가 있음
+        editMode = !editMode;//수정,삭제모드일때만 버튼이 새로 생성돼서 표시되게
+        const ruleItems = document.querySelectorAll("#ruleList li");//li각각 불러오기 li의 span-text, span-button
 
-        function handleKeyDown(event) {
+        ruleItems.forEach((item) => {
+            if (editMode) {
+            const actions = document.createElement("span");
+            actions.className = "rule-actions";//각각의 span에 클래스명 지정
+
+            // 수정 버튼
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "수정";
+            editBtn.className = "edit-btn";
+            editBtn.onclick = () => editRule(item);//수정 기능은 따로 밑에 함수로 빼둠
+
+            // 삭제 버튼
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "삭제";
+            deleteBtn.className = "delete-btn";
+            deleteBtn.onclick = () => {
+            const id = item.dataset.id;
+            fetch('/delete_rule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            }).then(res => res.json())
+                .then(data => {
+                if (data.success) {
+                    item.remove();
+                } else {
+                    alert('삭제 실패');
+                }
+                });
+                document.getElementById("toggleSettingsBtn").click();
+            };
+
+            const giveScoreBtn = document.createElement("button");
+            giveScoreBtn.textContent = "🧑";
+            giveScoreBtn.className = "give-score-btn";
+            giveScoreBtn.onclick = () => openScoreModal(item);
+
+            // 중복 추가 방지
+            actions.appendChild(giveScoreBtn);
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+            if (!item.querySelector(".rule-actions")) item.appendChild(actions);
+
+            } else {
+            // 편집 모드 해제 시 버튼 묶음 전체 제거
+            const actions = item.querySelector(".rule-actions");
+            if (actions) actions.remove();
+            }
+        });
+        }
+
+        function editRule(item) {
+            currentEditItem = item;
+            
+            const textSpan = item.querySelector(".rule-text");
+            const fullText = textSpan.textContent.trim();
+
+            // "규칙 내용 (5점)" 형태라면 점수 분리하기
+            const match = fullText.match(/^(.*)\s\((\d+)점\)$/);
+
+            let oldContent = fullText;
+            let oldScore = "";
+
+            if (match) {
+                oldContent = match[1]; // 규칙 내용
+                oldScore = match[2];   // 점수 (문자열)
+            }
+
+            const contentInput = document.getElementById("editRuleInput");
+            const scoreInput = document.getElementById("editScoreInput");
+
+            // placeholder 대신 바로 value로 넣는 게 더 UX 좋음
+            contentInput.value = oldContent;
+            scoreInput.value = oldScore;
+
+            document.getElementById("modal3").style.display = "flex"; // 모달 띄우기
+        }
+
+        function confirmEdit() {
+            const contentInput = document.getElementById("editRuleInput");
+            const scoreInput = document.getElementById("editScoreInput");
+            const newText = contentInput.value.trim();
+            const newScore = scoreInput.value.trim();
+
+            if (!newText) {
+                alert("수정할 내용을 입력해주세요.");
+                return;
+            }
+            if (newScore === "" || isNaN(newScore)) {
+                alert("유효한 점수를 입력해주세요.");
+                return;
+            }
+            const item = currentEditItem;
+            const ruleId = item.dataset.id;
+            const textSpan = item.querySelector(".rule-text");
+
+            fetch("/update_rule", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: ruleId, content: newText, score: Number(newScore) }),
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    textSpan.textContent = `${newText} (${newScore}점)`;
+                    document.getElementById("toggleSettingsBtn").click(); // 설정 버튼 자동 닫기
+                    closeModal("modal3");
+                } else {
+                    alert("수정 실패");
+                }
+            });
+        }
+
+        function openScoreModal(item) {
+            // 선택한 규칙 저장
+            currentEditItem = item;
+            const modal = document.getElementById('modal4');
+            modal.style.display = 'flex';
+
+            const userListDiv = document.getElementById('userList');
+            userListDiv.innerHTML = ''; // 기존 버튼 제거
+
+            // 서버에서 유저 목록 가져오기
+            fetch("/get_users")
+                .then(res => res.json())
+                .then(users => {
+                    users.forEach(user => {
+                        const btn = document.createElement("button");
+                        btn.textContent = user.username;
+                        btn.onclick = async () => {
+                            const ruleId = currentEditItem.dataset.id;       // li에 저장된 id
+                            const res = await fetch("/give_score", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    ruleId: ruleId,
+                                    userId: user.id
+                                })
+                            });
+
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`${user.username}에게 ${data.score}점 부여 완료`);
+                            } else {
+                                alert("점수 부여 실패");
+                            }
+                            modal.style.display = 'none';
+                        };
+
+                        userListDiv.appendChild(btn);
+                    });
+                });
+        }
+
+        function loadApproveUserList() { // 로그인한 사람이 admin일때 모달이 뜨게해서 모달이 뜬사람의 로그인정보 활용한거임
+            const adminUsername = "{{ username }}";
+            const approveUserListDiv = document.getElementById('approveUserList');
+            approveUserListDiv.innerHTML = ''; // 기존 버튼 제거
+
+            fetch(`/get_approve_users?admin=${encodeURIComponent(adminUsername)}`)
+                .then(res => res.json())
+                .then(users => {
+                    if (users.length === 0) {
+                        approveUserListDiv.innerHTML = '<p>승인 요청이 없습니다.</p>';
+                        return;
+                    }
+                    users.forEach(user => {
+                        const btn = document.createElement("button");
+                        btn.textContent = user.username;
+                        btn.onclick = async () => {
+                            const admin = "{{ username }}"; // 현재 로그인한 관리자 이름(채팅방 이름)
+                            const res = await fetch("/approve_user", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ username: user.username, admin }) // username과 admin 전달
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`${user.username} 승인 완료`);
+                                loadApproveUserList(); // 목록 새로고침
+                            } else {
+                                alert("승인 실패");
+                            }
+                        };
+                        approveUserListDiv.appendChild(btn);
+                    });
+                });
+        }
+
+        function confirmEditEnter(event) {
           if (event.key === "Enter") {
             const input = event.target;
-            submitRule(input);
+            confirmEdit();
+          }            
+        }
+        function moveToEditScoreEnter(event) {
+          if (event.key === "Enter") {
+            event.preventDefault(); // 폼 제출 방지
+            document.getElementById("editScoreInput").focus(); // 점수 입력칸으로 이동
+          }
+        }
+        function submitRuleEnter(event) {//html과 연결할 함수
+          if (event.key === "Enter") {
+            const input = event.target;
+            submitRule(
+                document.getElementById("newRuleInput"),
+                document.getElementById("newScoreInput")
+            );
+          }
+        }
+        function moveToScoreEnter(event) {
+          if (event.key === "Enter") {
+            event.preventDefault(); // 폼 제출 방지
+            document.getElementById("newScoreInput").focus(); // 점수 입력칸으로 이동
           }
         }
 
-        function handleRuleAddButtonClick() {
-          const input = document.getElementById("newRuleInput");
-          submitRule(input);
+        function handleRuleAddButtonClick() {//html과 연결할 함수
+            submitRule(
+                document.getElementById("newRuleInput"),
+                document.getElementById("newScoreInput")
+            );
         }
         
 		function loadRules() {
@@ -749,7 +1079,13 @@
       		ruleUl.innerHTML = ""; // 기존 규칙 초기화
       		ruleList.forEach(rule => {
         		const li = document.createElement("li");
-        		li.textContent = rule.content;
+                li.dataset.id = rule._id;
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'rule-text';
+                textSpan.textContent = `${rule.content} (${rule.score}점)`;
+
+        		li.appendChild(textSpan);
         		ruleUl.appendChild(li);
       		});
     		});

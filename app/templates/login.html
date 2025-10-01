@@ -124,11 +124,12 @@
   <div class="login-box">
     <h2>우리반 보약 로그인</h2>
 	<form id="loginForm" method="post" action="/login">
-  	<input type="text" name="username" placeholder="아이디">
-  	<input type="password" name="password" placeholder="비밀번호">
+  	<input type="text" id="id" name="username" placeholder="아이디">
+  	<input type="password" id="pw"name="password" placeholder="비밀번호">
   	<button type="submit">로그인</button>
 	</form>
-    <a href="/signup" class="signup-button">회원가입</a>
+    <a href="/signup_user" class="signup-button">회원가입</a>
+    <a href="/signup_admin" class="signup-button">관리자 회원가입</a>
   </div>
   <div id="overlay"></div>
   <div id="modal">
@@ -136,13 +137,7 @@
     <button id="closeModalButton" onclick="closeModal()">다시 로그인</button>
   </div>
   <script>
-    function login() {
-	  document.addEventListener('keyup', function(event) {
-  	  if (event.key === 'Enter') {
-        document.querySelector('form').submit(); // ← 이 방식이 안전
-  		}
-	  })
-    };
+
     function showModal() {
       document.getElementById("modal").style.display = "block";
       document.getElementById("overlay").style.display = "block";
@@ -152,11 +147,18 @@
       document.getElementById("modal").style.display = "none";
       document.getElementById("overlay").style.display = "none";
     }
-
+    document.getElementById("id").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // 폼 제출 막기
+        document.getElementById("pw").focus();
+      }
+    });
     // 로그인 실패 시 자동 실행 (Flask에서 실패 정보를 넘겨줬을 때)
-    {% if login_failed %}
-    showModal();
-    {% endif %}
+    document.addEventListener("DOMContentLoaded", function() {
+      {% if login_failed %}
+      showModal();
+      {% endif %}
+    });
   </script>
 </body>
 </html>
