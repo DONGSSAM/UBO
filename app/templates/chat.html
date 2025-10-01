@@ -366,7 +366,12 @@
         .center-image {
             text-align: center;
         }
-
+        .button-group button {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 14px;
+        }
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
@@ -376,7 +381,12 @@
     <div class="container clearfix"><!-- 컨테이너 박스에 디자인할 요소들 설정해서 배치함 -->
         <div class="chat">
             <div class="chat-header clearfix">
-                <button onclick="openModal('modal1')">학급 규칙 보기</button>
+                <div class="button-group" style="display: flex; flex-direction: column; gap: 5px;">
+                    <button onclick="openModal('modal1')">학급 규칙</button>
+                    {% if role == "admin" %}
+                    <button onclick="openModal('modal5')">승인 요청</button>
+                    {% endif %}
+                </div>
                 <img style="width:60px; border-radius:50px; margin-left:10px;" src="{{ url_for('static', filename='images/logo.png') }}?v=3" alt="moungbo" />
                 <div class="chat-about" style="white-space: pre;">우리반보약</div>
                 <div class="user-info">
@@ -476,6 +486,13 @@
             <div id="userList"></div>
 
             <button class="close-btn" onclick="closeModal('modal4')">닫기</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modal5" onclick="handleOverlayClick(event, 'modal5')">
+        <div class="modal">
+            <h3 class="modal-header">승인 요청 목록</h3>
+            <div id="approveUserList"></div>
+            <button class="close-btn" onclick="closeModal('modal5')">닫기</button>
         </div>
     </div>
 
@@ -770,7 +787,10 @@
         })();
 
         function openModal(id) {
-    	document.getElementById(id).style.display = "flex";
+    	    document.getElementById(id).style.display = "flex";
+            if (id === "modal5") {
+                loadApproveUserList();
+            }
   		}
 
   		function closeModal(id) {
@@ -979,6 +999,39 @@
                 });
         }
 
+        function loadApproveUserList() {
+            const adminUsername = "{{ username }}";
+            const approveUserListDiv = document.getElementById('approveUserList');
+            approveUserListDiv.innerHTML = ''; // 기존 버튼 제거
+
+            fetch(`/get_approve_users?admin=${encodeURIComponent(adminUsername)}`)
+                .then(res => res.json())
+                .then(users => {
+                    if (users.length === 0) {
+                        approveUserListDiv.innerHTML = '<p>승인 요청이 없습니다.</p>';
+                        return;
+                    }
+                    users.forEach(user => {
+                        const btn = document.createElement("button");
+                        btn.textContent = user.username;
+                        btn.onclick = async () => {
+                            const res = await fetch("/approve_user", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ userId: user.id })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`${user.username} 승인 완료`);
+                                loadApproveUserList(); // 목록 새로고침
+                            } else {
+                                alert("승인 실패");
+                            }
+                        };
+                        approveUserListDiv.appendChild(btn);
+                    });
+                });
+        }
 
         function confirmEditEnter(event) {
           if (event.key === "Enter") {

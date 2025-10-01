@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify
 from datetime import datetime
 import sys, bcrypt, qrcode
-from db import users, check_connection, rules
+from db import users, check_connection, rules, chat_rooms
 from bson.objectid import ObjectId
 
 app = Flask(__name__)
@@ -24,7 +24,10 @@ def login():
         session["username"] = username
         session["role"] = user.get("role")
         print("로그인 시 username:", username)
-        return redirect("/chat")
+        if not user.get("approved"):  # 기본값 False
+            print("승인 대기중인 사용자:", username)
+            return render_template("standby.html")
+        return redirect(f"/chat")
     else:
         return render_template("login.html", login_failed=True)
 
@@ -52,14 +55,26 @@ def register_admin():
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
         "point": 500,
-        "role": role
+        "role": role,
+        "approved": True,
     })
+
+    if role == "admin":
+        chat_rooms.insert_one({
+            "name": f"{username}의 채팅방",
+            "admin_username": username,
+            "created_at": datetime.utcnow(),
+            "users": [],
+            "rules": []
+        })
+
     return jsonify(success=True, redirect=url_for("logIn"))
 
 @app.route("/signup_userdata", methods=["POST"])
 def register_user():
     username = request.form["username"]
     password = request.form["password"]
+    admin = request.form["admin"]
     role = request.form.get("role")
 
     if users.find_one({"username": username}):
@@ -72,8 +87,14 @@ def register_user():
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
         "point": 500,
-        "role": role
+        "approved": False,
+        "role": role,
+        "admin": admin
     })
+    chat_rooms.update_one(
+        {"admin_username": admin},
+        {"$push": {"users": username}}
+    )
     return jsonify(success=True, redirect=url_for("logIn"))
 
 @app.route("/check_username", methods=["POST"])
@@ -102,15 +123,77 @@ def catch_pokemon():
     
     
 @app.route("/chat")
-def chat_app():
-    username = session.get("username", None)
-    role = session.get("role", None)
-    print("채팅방 입장 시 username:", username)
-    if username is None:
+def chat_redirect():
+    session_username = session.get("username")
+    role = session.get("role")
+
+    if not session_username:
         return redirect("/")
-    user = users.find_one({"username": username})
+
+    user = users.find_one({"username": session_username})
+    if not user:
+        return redirect("/")
+
+    # 채팅방 이름 결정
+    if role == "admin":
+        room_name = session_username   # 관리자는 자기 이름이 채팅방 이름
+    elif role == "user":
+        room_name = user.get("admin")  # 유저는 admin 필드 값이 채팅방 이름
+    else:
+        return "권한 없음", 403
+
+    # 최종적으로 같은 주소로 이동
+    return redirect(f"/chat/{room_name}")
+
+
+@app.route("/chat/<room_name>")
+def chat_app(room_name):
+    session_username = session.get("username")
+    role = session.get("role")
+
+    if not session_username:
+        return redirect("/")
+
+    user = users.find_one({"username": session_username})
+    if not user:
+        return redirect("/")
+
     point = user.get("point", 0)
-    return render_template("chat.html", username=username, point=point, role=role)
+
+    return render_template("chat.html", 
+                           username=session_username, 
+                           point=point, 
+                           role=role, 
+                           room_name=room_name)
+
+@app.route('/get_approve_users')
+def get_approve_users():
+    admin = request.args.get("admin")
+    # 조건: admin 필드가 현재 관리자 username이고, approved가 False인 유저만
+    user_list = list(users.find(
+        {"role": "user", "admin": admin, "approved": False},
+        {"_id": 1, "username": 1}
+    ))
+    for user in user_list:
+        user["id"] = str(user["_id"])
+        del user["_id"]
+    return jsonify(user_list)
+
+@app.route('/approve_user', methods=['POST'])
+def approve_user():
+    data = request.get_json()
+    user_id = data.get('userId')
+    if not user_id:
+        return jsonify(success=False, message="userId 없음"), 400
+
+    result = users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"approved": True}}
+    )
+    if result.modified_count == 1:
+        return jsonify(success=True)
+    else:
+        return jsonify(success=False, message="승인 실패")
 
 @app.route("/give_point", methods=["POST"])
 def give_point():
@@ -171,14 +254,27 @@ def give_score():
 def add_rule():
     data = request.get_json()
     content = data.get("content", "").strip()
-    score = data.get("score", None)
+    try:
+        score = int(data.get("score", 0))
+    except (TypeError, ValueError):
+        score = 0
+    admin_username = session.get("username")
+
     if content:
-        result = rules.insert_one({
+        rule_doc = {
             "content": content,
             "score": score,
-            "created_at": datetime.now()#관리자 유저 이름 기반으로 채팅방 나누고 관리자마다 관리하는 학생, 채팅방 규칙 데이터베이스에 저장하기
-        })
-        return jsonify(success=True, id=str(result.inserted_id))
+            "created_at": datetime.utcnow()
+        }
+        result = rules.insert_one(rule_doc)#관리자 유저 이름 기반으로 채팅방 나누고 관리자마다 관리하는 학생, 채팅방 규칙 데이터베이스에 저장하기
+        rule_id = str(result.inserted_id)
+        rule_doc["_id"] = rule_id
+
+        chat_rooms.update_one(
+            {"admin_username": admin_username},
+            {"$push": {"rules": rule_doc}}
+        )
+        return jsonify(success=True, id=rule_id, rule=rule_doc)
     return jsonify(success=False, message="빈 규칙입니다.")
 
 @app.route("/get_rules")

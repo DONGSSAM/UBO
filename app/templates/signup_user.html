@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preload stylesheet" as="style" href='https://fonts.googleapis.com/css2?family=Gothic+A1:wght@200&family=Nanum+Gothic&family=Nanum+Myeongjo&family=Noto+Sans+KR:wght@400&family=Roboto:wght@100&display=swap'>    
-    <title>명보 회원가입</title>
+    <title>우보 회원가입</title>
     <style>/*헤드의 스타일은 사용할 요소들의 스타일만 지정함 컨테이너박스 안에서 추가된다면 어디서 추가될지 이미지로만 설정함 스크립트와 호환은 x 폰트나 위치, 에니메이션 정도로만 설정 나중에 js에서 기능 추가할 때 고려해서 none정도만 단순 디자인만 설정함*/
 	  @import url('https://fonts.googleapis.com/css?family=Lato:400,700');
       @import url('https://fonts.googleapis.com/css?family=Do+Hyeon:400');
@@ -97,13 +97,14 @@
   <div class="signup-box">
     <h2>우리반 보약 회원가입</h2>	
     <form id="signupForm">
-    <input type="hidden" name="role" value="user">
-    <div class="name-box">
-      <input type="text" id="username" name="username" placeholder="아이디(2글자 이상)">
-      <span id="username-msg"></span>
-    </div>
-  	<input type="password" name="password" placeholder="비밀번호">
-    <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
+      <input type="hidden" name="role" value="user">
+      <div class="name-box">
+        <input type="text" id="username" name="username" placeholder="아이디(2글자 이상)">
+        <span id="username-msg"></span>
+      </div>
+      <input type="text" id="password" name="password" placeholder="비밀번호">
+      <input type="text" id="admin" name="admin" placeholder="선생님ID">
+      <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
     </form>
 	</div>
 
@@ -140,13 +141,14 @@
   function submitSignup() {
     const form = document.getElementById('signupForm');
     const username = form.username.value;
+    const admin = form.admin.value;
     if (username.length < 2) {
       alert('아이디는 2글자 이상이어야 합니다.');
       return;
     }
     const formData = new FormData(form);
     
-    fetch('/signup_admindata', {
+    fetch('/signup_userdata', {
       method: 'POST',
       body: formData
     })
@@ -159,6 +161,23 @@
     })
     .catch(error => console.error('Error:', error));
   }
+
+  document.getElementById("username").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      document.getElementById("password").focus();
+    }
+  });
+  document.getElementById("password").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      document.getElementById("admin").focus();
+    }
+  });
+  document.getElementById("admin").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      submitSignup();
+    }
+  });
 </script>
 
 </body>
