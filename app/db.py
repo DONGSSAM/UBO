@@ -4,7 +4,6 @@ uri = "mongodb+srv://glddiglddi:dkdk1378@user.y0fcfhd.mongodb.net/?retryWrites=t
 client = MongoClient(uri)
 db = client['mydatabase']
 users = db['users']
-rules = db['rules']
 chat_rooms = db['chat_rooms']
 
 def check_connection():
