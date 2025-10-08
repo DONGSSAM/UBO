@@ -65,8 +65,7 @@ def register_admin():
         "username": username,
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
-        "role": role,
-        "approved": True,
+        "role": role
     })
 
     if role == "admin":
@@ -129,7 +128,7 @@ def get_approve_users():
             })
     return jsonify(user_list)
 
-@app.route('/approve_user', methods=['POST'])
+@app.route('/approve_user', methods=['POST'])#//한 번 거절하면 ban되는 기능 추가해야함
 def approve_user():
     data = request.get_json()
     username = data.get('username')
@@ -146,12 +145,20 @@ def approve_user():
     else:
         return jsonify(success=False, message="승인 실패")
     
-@app.route('/get_users') #가져오는 출처 수정하기
+@app.route('/get_users') #점수부여할 유저 리스트 가져오기
 def get_users():
     admin_name = session.get("username") #현재 로그인한 관리자 이름
     chat_room = chat_rooms.find_one(
         {"admin_name": admin_name},
-        {"users": 1}  # users 배열만 가져오기
+        {
+            "users": {
+                "$filter": {
+                    "input": "$users",
+                    "as": "user",
+                    "cond": {"$eq": ["$$user.approved", True]}
+                }
+            }
+        }
     )
     if not chat_room or "users" not in chat_room:
         return jsonify([])
@@ -379,7 +386,13 @@ def add_rule():
 
 @app.route("/get_rules")
 def get_rules():
-    admin_name = session.get("username")
+    if session.get("role") == "admin":
+        admin_name = session.get("username")
+    else:
+        user = users.find_one({"username": session.get("username")})
+        if not user or not user.get("chat_rooms"):
+            return jsonify([])
+        admin_name = user["chat_rooms"][0]  # 첫 번째 채팅방의 관리자 이름 사용
     chat_room = chat_rooms.find_one({"admin_name": admin_name}, {"rules": 1})
     if not chat_room:
         return jsonify([])

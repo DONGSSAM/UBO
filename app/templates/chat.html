@@ -492,7 +492,9 @@
         <div class="modal">
             <h3 class="modal-header">승인 요청 목록</h3>
             <div id="approveUserList"></div>
-            <button class="close-btn" onclick="closeModal('modal5')">닫기</button>
+            <div class="modal-footer">
+                <button class="close-btn" onclick="closeModal('modal5')">닫기</button>
+            </div>
         </div>
     </div>
 
@@ -540,7 +542,9 @@
         </li>      
         {% endraw %}
     </script>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
+        const socket = io(); // 소켓 연결 초기화
         (function () {<!-- 즉시실행함수 한번만 실행됨 초기화 내용 적용-->
             var chat = {
                 messageToSend: '',//메세지 창에 표시하는 형태로 메세지, 드롭된 파일 대해서 처리하는 로직
