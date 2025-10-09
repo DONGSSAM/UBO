@@ -542,9 +542,7 @@
         </li>      
         {% endraw %}
     </script>
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io(); // 소켓 연결 초기화
         (function () {<!-- 즉시실행함수 한번만 실행됨 초기화 내용 적용-->
             var chat = {
                 messageToSend: '',//메세지 창에 표시하는 형태로 메세지, 드롭된 파일 대해서 처리하는 로직
@@ -724,7 +722,7 @@
                 		if (this.messageToSend === "!던져") {
                         	await this.catchPokemon(username, -500);
                     		}
-                        else if (this.messageToSend.startsWith("!전달 ")) {
+                        else if (this.messageToSend.startsWith("!전달")) {
                             const give = this.messageToSend.split(" ")
 						    if (give.length < 3) {
 					        this.render("전달할 사용자 이름과 포인트를 입력하세요. 예: !전달 이름 100", null, false);
