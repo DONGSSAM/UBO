@@ -26,18 +26,7 @@ def login():
         session["username"] = username
         session["role"] = user.get("role")
         print("로그인 시 username:", username)
-        # chat_rooms에서 해당 유저의 approved 상태 확인
-        chat_rooms_list = user.get("chat_rooms", [])
-        approved = True
-        for room_name in chat_rooms_list:
-            chat_room = chat_rooms.find_one({"admin_name": room_name})
-            if chat_room:
-                user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
-                if user_info and not user_info.get("approved", False):
-                    approved = False
-                    break
-
-        if not approved:
+        if not user.get("approved"):  # 기본값 False
             print("승인 대기중인 사용자:", username)
             return render_template("standby.html")
         return redirect(f"/chat")
@@ -67,15 +56,16 @@ def register_admin():
         "username": username,
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
-        "role": role
+        "point": 500,
+        "role": role,
+        "approved": True,
     })
 
     if role == "admin":
         chat_rooms.insert_one({
             "name": f"{username}의 채팅방",
-            "admin_name": username,
+            "admin_username": username,
             "created_at": datetime.utcnow(),
-            "point": 5000,
             "users": [],
             "rules": []
         })
@@ -98,18 +88,17 @@ def register_user():
         "username": username,
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
+        "point": 500,
+        "approved": False,
         "role": role,
-        "chat_rooms": [admin]
+        "admin": admin
     })
     chat_rooms.update_one(
-        {"admin_name": admin},
-        {"$push": {"users": {"username": username, "point": 500, "approved": False}}}
+        {"admin_username": admin},
+        {"$push": {"users": username}}
     )
     return jsonify(success=True, redirect=url_for("logIn"))
 
-#유저 관련 코드
-
-#아이디가 중복되는지 확인하는 코드
 @app.route("/check_username", methods=["POST"])
 def check_username():
     username = request.form["username"]
@@ -247,29 +236,95 @@ def handle_message(data):
 
 @app.route("/catchpokemon", methods=["POST"])
 def catch_pokemon():
-    data = request.get_json()#채팅방 정보에서 username amount admin를 json형태로 받음
+    data = request.get_json()
     username = data["username"]
     amount = data["amount"]
-    admin = data.get("admin")  # 어떤 채팅방(관리자)에서 포인트를 변경할지 프론트에서 전달해야 함
+    user = users.find_one({"username": username})
+    if not user:
+        return {"success": False, "message": "사용자 없음"}, 404
 
-    chat_room = chat_rooms.find_one({"admin_name": admin})
-    if not chat_room:
-        return {"success": False, "message": "채팅방 없음"}, 404
-
-    user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
-    if not user_info:
-        return {"success": False, "message": "관리자는 던질 수 없어."}, 404
-
-    current_point = user_info.get("point", 0)
+    current_point = user.get("point", 0)
     if current_point + amount < 0:
         return {"success": False, "message": "포인트가 부족해."}, 400
-
-    # users 배열에서 해당 유저의 포인트 업데이트
-    chat_rooms.update_one(
-        {"admin_name": admin, "users.username": username},
-        {"$inc": {"users.$.point": amount}}
+    users.update_one(
+        {"username": username},
+        {"$inc": {"point": amount}}
     )
     return {"success": True, "new_point": current_point + amount}
+    
+    
+@app.route("/chat")
+def chat_redirect():
+    session_username = session.get("username")
+    role = session.get("role")
+
+    if not session_username:
+        return redirect("/")
+
+    user = users.find_one({"username": session_username})
+    if not user:
+        return redirect("/")
+
+    # 채팅방 이름 결정
+    if role == "admin":
+        room_name = session_username   # 관리자는 자기 이름이 채팅방 이름
+    elif role == "user":
+        room_name = user.get("admin")  # 유저는 admin 필드 값이 채팅방 이름
+    else:
+        return "권한 없음", 403
+
+    # 최종적으로 같은 주소로 이동
+    return redirect(f"/chat/{room_name}")
+
+
+@app.route("/chat/<room_name>")
+def chat_app(room_name):
+    session_username = session.get("username")
+    role = session.get("role")
+
+    if not session_username:
+        return redirect("/")
+
+    user = users.find_one({"username": session_username})
+    if not user:
+        return redirect("/")
+
+    point = user.get("point", 0)
+
+    return render_template("chat.html", 
+                           username=session_username, 
+                           point=point, 
+                           role=role, 
+                           room_name=room_name)
+
+@app.route('/get_approve_users')
+def get_approve_users():
+    admin = request.args.get("admin")
+    # 조건: admin 필드가 현재 관리자 username이고, approved가 False인 유저만
+    user_list = list(users.find(
+        {"role": "user", "admin": admin, "approved": False},
+        {"_id": 1, "username": 1}
+    ))
+    for user in user_list:
+        user["id"] = str(user["_id"])
+        del user["_id"]
+    return jsonify(user_list)
+
+@app.route('/approve_user', methods=['POST'])
+def approve_user():
+    data = request.get_json()
+    user_id = data.get('userId')
+    if not user_id:
+        return jsonify(success=False, message="userId 없음"), 400
+
+    result = users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"approved": True}}
+    )
+    if result.modified_count == 1:
+        return jsonify(success=True)
+    else:
+        return jsonify(success=False, message="승인 실패")
 
 @app.route("/give_point", methods=["POST"])
 def give_point():
@@ -379,7 +434,7 @@ def add_rule():
         score = int(data.get("score", 0))
     except (TypeError, ValueError):
         score = 0
-    admin_name = session.get("username")#일단 관리자마다 하나씩만 채팅방 만듦
+    admin_username = session.get("username")
 
     if content:
         rule_doc = {#규칙별로 id부여해서 클릭했을때 고유한 규칙으로서 판단함
@@ -391,7 +446,7 @@ def add_rule():
         rule_id = rule_doc["_id"]
 
         chat_rooms.update_one(
-            {"admin_name": admin_name},
+            {"admin_username": admin_username},
             {"$push": {"rules": rule_doc}}
         )
         return jsonify(success=True, id=str(rule_id), rule={**rule_doc, "_id": str(rule_id)})

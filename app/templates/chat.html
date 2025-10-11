@@ -779,11 +779,10 @@
             		return koreanEntry ? koreanEntry.name : "(이름 없음)";
                 },
                 catchPokemon: async function(username, amount) {
-                    const admin = "{{ room_name }}"; // 템플릿 변수로 현재 채팅방 관리자 이름 전달
                     const res = await fetch("/catchpokemon", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, amount, admin })//admin추가
+                    body: JSON.stringify({ username, amount })
                 	});
                     const result = await res.json();
                     if (result.success) {
@@ -1050,11 +1049,10 @@
                         const btn = document.createElement("button");
                         btn.textContent = user.username;
                         btn.onclick = async () => {
-                            const admin = "{{ username }}"; // 현재 로그인한 관리자 이름(채팅방 이름)
                             const res = await fetch("/approve_user", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ username: user.username, admin }) // username과 admin 전달
+                                body: JSON.stringify({ userId: user.id })
                             });
                             const data = await res.json();
                             if (data.success) {
