@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify
 from datetime import datetime
+from flask_socketio import SocketIO, emit
 import sys, bcrypt, qrcode
 from db import users, check_connection,  chat_rooms
 from bson.objectid import ObjectId
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 app.config['SECRET_KEY'] = "your-very-secret-key"
 
@@ -191,6 +193,7 @@ def chat_redirect():
 def chat_app(room_name):
     session_username = session.get("username")
     role = session.get("role")
+    time = datetime.now().strftime('%H:%M')  # 현재 시간 (시:분) 형식으로 저장
 
     if not session_username:
         return redirect("/")
@@ -216,7 +219,8 @@ def chat_app(room_name):
                            username=session_username, 
                            point=point, 
                            role=role, 
-                           room_name=room_name)
+                           room_name=room_name,
+                           time=time)
 
 def get_room_name(user, role, session_username):
     if role == "admin":
@@ -228,6 +232,15 @@ def get_room_name(user, role, session_username):
         return chat_rooms_list[0]#채팅방 리스트 중에 첫번째로 이동함 나중에 채팅방 여러개면 선택하는 페이지 만들기
     else:
         return "권한 없음", 403
+    
+# 실시간 채팅 관련 코드
+@socketio.on('message')
+def handle_message(data):
+    user = data.get('user', '익명')#username이 페이지렌더링할때 이름이랑 겹쳐서 user로 바꿈
+    message = data.get('message', '')
+    time = data.get('time', '')
+    emit('message', {'user': user, 'message': message, 'time': time}, broadcast=True)
+
 
 
 # 포인트 관련 코드
@@ -453,4 +466,4 @@ def delete_rule():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=80)
+    socketio.run(app, host='0.0.0.0', port=80)

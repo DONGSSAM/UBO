@@ -1,7 +1,8 @@
 <!DOCTYPE html> 
 <html lang="en">  
   
-<head>  
+<head>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>  
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="mobile-web-app-capable" content="yes">
@@ -504,8 +505,8 @@
          {% raw %}
         <li class="clearfix">
             <div class="message-data align-right">                
-                <span class="message-data-name" >나</span>
-                <span class="message-data-time" >Today</span> &nbsp; &nbsp;                
+                <span class="message-data-name" >{{username}}</span>
+                <span class="message-data-time" >{{time}}</span> &nbsp; &nbsp;                
             </div>
             <div class="message my-message float-right">
                 {{messageOutput}}
@@ -524,8 +525,8 @@
         <li class="clearfix">
             <div class="message-data">
                 <img src="/static/images/trainer.png?v=1" class="face-image"?>
-                <span class="message-data-name">칭찬맨</span>
-                <span class="message-data-time">Today</span>
+                <span class="message-data-name">{{username}}</span>
+                <span class="message-data-time">{{time}}</span>
             </div>
             <div class="message other-message float-left">
                 {{#if loading}}
@@ -545,10 +546,12 @@
     <script>
         (function () {<!-- 즉시실행함수 한번만 실행됨 초기화 내용 적용-->
             var chat = {
+                socket: null,
                 messageToSend: '',//메세지 창에 표시하는 형태로 메세지, 드롭된 파일 대해서 처리하는 로직
                 init: function () {
                     this.cacheDOM();//여기서 this는 chat이라는 객체임 그 객체에 대해서 초기화 설정함수 document.querySelector함수로 자동적으로 설정해줌 send버튼, 대화내용 객체로 가져옴
                     this.bindEvents();//cacheDOM에서 설정한 것으로 이벤트리스너로 연결함
+                    this.initSocket(); // 소켓 초기화
                 },                
                 // 드래그 앤 드롭 이벤트 핸들러를 chat 객체 내에 포함시킵니다.
                 initDragAndDrop: function () {
@@ -582,8 +585,9 @@
                 handleFiles: function (files) {
                     ([...files]).forEach(this.uploadFile.bind(this));//파일을 배열형태로 업로드함
                 },
-            
-                uploadFile: function (file) {
+                
+                //input요소에 파일을 강제로 넣어주는 함수
+                /*uploadFile: function (file) {
                     var fileInput = document.getElementById('image-upload');
                     var dataTransfer = new DataTransfer();
                     dataTransfer.items.add(file);
@@ -591,7 +595,7 @@
             
                     // 미리보기 기능을 호출합니다. 밑에 함수 있음 이미지 랜더링해서 미리보기만 띄우기
                     this.previewImage();
-                },
+                },*/
                 // Cache DOM elements
                 cacheDOM: function () {
                     this.chatHistory = document.querySelector('.chat-history');
@@ -603,11 +607,20 @@
                 bindEvents: function () {
                     this.button.addEventListener('click', this.addMessage.bind(this));
                     this.textarea.addEventListener('keyup', this.addMessageEnter.bind(this));
-                    document.getElementById('image-upload').addEventListener('change', this.previewImage.bind(this));//image-upload로 폼요소의 값이 변했을 때(input의 객체가 변했을때) previewImage함수 실행됨
+                    //document.getElementById('image-upload').addEventListener('change', this.previewImage.bind(this));//image-upload로 폼요소의 값이 변했을 때(input의 객체가 변했을때) previewImage함수 실행됨
+                },
+                //소켓서버에서 메세지 받았을 때 실행
+                initSocket: function () {
+                    
+                    this.socket = io(); // 서버와의 소켓 연결 초기화
+                    this.socket.on('message', ({ user, message, time }) => {
+                        const currentUser = "{{ username }}"; // 템플릿 변수로 현재 사용자 이름 전달
+                        if (user === currentUser) return; // 내가 보낸 메시지는 무시
+                        this.render(user, time, message, null, false); // 서버로부터 메시지를 받으면 렌더링
+                    });
                 },
                 // Render a new message isUser이 true이면 사용자메세지 false이면 상대방 메세지
-                render: function (message, imageUrl, isUser) {
-                    //this.scrollToBottom();
+                render: function (user, time, message, imageUrl, isUser) {
 
                     const templateId = isUser ? "#message-template" : "#message-response-template";//isUser가 true이면 앞에 값, false면 뒤에 값 할당                    
 
@@ -615,9 +628,10 @@
                     //HTML에서 templateId객체를 선택해서 그 객체를 브라우저가 인식할 수 있는 코드로 바꿔줌 handlebars 사용하겠다는 표시가 스크립트로 html파일에 있어야함 type="text/x-handlebars-template"
 
                     const context = {
+                        username: user,
                         messageOutput: message,
                         imageUrl: imageUrl, 
-                        time: this.getCurrentTime()
+                        time: time
                     };
 
                     let htmlString = template(context)
@@ -634,6 +648,80 @@
                         this.textarea.value = '';
                     }
                 },
+                //서버로 emit하는 함수//이미지는 나중에 로직짜기
+                emitMessage: function(user, message, imageUrl = null) {
+                    const now = new Date();
+                    const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                    this.socket.emit('message', {
+                        user: user,
+                        message: message,
+                        time: time
+                    });
+                },
+                // Add a message and its response
+                addMessage: async function () {
+                    const now = new Date();
+                    const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                    const username = "{{ username }}";
+                    const formData = new FormData();//FormData는 서버에 보낼 데이터를 딕셔너리 형식으로 추가할 수 있게 하는 객체를 만들어주는 함수임
+                    this.messageToSend = this.textarea.value.trim();//textarea의 dom요소에 입력값을 공백 제거해서 가져옴
+                    if (this.messageToSend){
+                        this.render(username, time, this.messageToSend, null, true);//내 메세지는 랜더 후 emit
+                        this.emitMessage(username, this.messageToSend);
+                    	}//render함수로 내가 보낸 메세지를 먼저 채팅창에 띄워줌
+                    if (this.messageToSend.startsWith("!")){
+                    	showBubblePromise = this.showBubbleAfterSeconds(500)
+                    	waitPromise = this.waitSeconds(1500)
+                    	await showBubblePromise //답변이 출력되고 버블링이 발생되는 현상 제어
+                    	await waitPromise  //최소 2초는 버블링
+                		if (this.messageToSend === "!던져") {
+                        	await this.catchPokemon(username, -500);
+                    		}
+                        else if (this.messageToSend.startsWith("!전달")) {
+                            const give = this.messageToSend.split(" ")
+						    if (give.length < 3) {
+                            
+					        this.emitMessage("칭찬맨", "전달할 사용자 이름과 포인트를 입력하세요. 예: !전달 이름 100");
+					        return;
+						    }                            
+                            const targetName = give[1]
+    						const givingPoint = Number(give[2])
+
+    						if (!/^\d+$/.test(givingPoint)) {
+        						this.emitMessage("칭찬맨", "유효한 포인트 숫자를 입력하세요. 예: !전달 이름 100");
+        						return;
+    						}
+                            const res = await fetch("/give_point", {
+    							method: "POST",
+    							headers: { "Content-Type": "application/json" },
+    							body: JSON.stringify({
+        						to: targetName,
+        						amount: givingPoint,  // 원하는 포인트 양을 추가
+                                admin: "{{ room_name }}" // 템플릿 변수로 현재 채팅방 관리자 이름 전달
+    								})
+								});
+        					const result = await res.json();
+        					if (result.success) {
+            					this.emitMessage("칭찬맨", result.message);  // 성공 메시지 출력
+            					document.getElementById("point").innerText = result.new_point;
+        					} 
+                        	else {
+            					this.emitMessage("칭찬맨", result.message);  // 실패 메시지 출력
+        						}
+                    		}
+                    	else {
+                            this.emitMessage("칭찬맨", "그건 알 수 없는 말이야.")
+                        	}
+                    document.getElementById('image-upload').value = ''; // 이미지 필드 초기화 존재할 때를 조건으로 실행하는 경우도 있고 다시 같은 이미지 업로드해도 change가 발생하지 않는 경우도 있음
+                	}
+                },
+                // Add a message when the Enter key is pressed
+                addMessageEnter: function (event) {
+                    if (event.keyCode === 13) {//엔터 키코드 엔터 눌렀을 때 addMessage 실행
+                        this.addMessage();
+                    }   
+                },
+
                 showResponse:  function (message) {
                     this.scrollToBottom();
                     const templateId = "#message-response-template";//id가 이것이고 <script type="text/x-handlebars-template">인 요소를 찾아서 템플릿 코드를 templateSource에 저장함
@@ -679,8 +767,9 @@
     				const randomId = Math.floor(Math.random() * 1025) + 1;
     				const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${randomId}.png`;
                     const name = await this.getPokemonKoreanName(randomId)
+
                     const message = `${name} 잡았다!!`;
-                    this.render(message, imageUrl, false);
+                    this.emitMessage("칭찬맨", message, imageUrl);
                     
                 },
                 getPokemonKoreanName: async function(id) {
@@ -702,69 +791,11 @@
                         document.getElementById("point").innerText = result.new_point;
                     }
                     else {
-                        this.render(result.message, null, false)
+                        this.emitMessage("칭찬맨", result.message);
                     }
                 },
  
-                // Add a message and its response
-                addMessage: async function () {
-                    const username = "{{ username }}";
-                    const formData = new FormData();//FormData는 서버에 보낼 데이터를 딕셔너리 형식으로 추가할 수 있게 하는 객체를 만들어주는 함수임
-                    this.messageToSend = this.textarea.value.trim();//textarea의 dom요소에 입력값을 공백 제거해서 가져옴
-                    if (this.messageToSend){
-                        this.render(this.messageToSend, null, true);
-                    	}//render함수로 내가 보낸 메세지를 먼저 채팅창에 띄워줌
-                    if (this.messageToSend.startsWith("!")){
-                    	showBubblePromise = this.showBubbleAfterSeconds(500)
-                    	waitPromise = this.waitSeconds(1500)
-                    	await showBubblePromise //답변이 출력되고 버블링이 발생되는 현상 제어
-                    	await waitPromise  //최소 2초는 버블링
-                		if (this.messageToSend === "!던져") {
-                        	await this.catchPokemon(username, -500);
-                    		}
-                        else if (this.messageToSend.startsWith("!전달")) {
-                            const give = this.messageToSend.split(" ")
-						    if (give.length < 3) {
-					        this.render("전달할 사용자 이름과 포인트를 입력하세요. 예: !전달 이름 100", null, false);
-					        return;
-						    }                            
-                            const targetName = give[1]
-    						const givingPoint = Number(give[2])
 
-    						if (!/^\d+$/.test(givingPoint)) {
-        						this.render("유효한 포인트 숫자를 입력하세요. 예: !전달 이름 100", null, false);
-        						return;
-    						}
-                            const res = await fetch("/give_point", {
-    							method: "POST",
-    							headers: { "Content-Type": "application/json" },
-    							body: JSON.stringify({
-        						to: targetName,
-        						amount: givingPoint,  // 원하는 포인트 양을 추가
-                                admin: "{{ room_name }}" // 템플릿 변수로 현재 채팅방 관리자 이름 전달
-    								})
-								});
-        					const result = await res.json();
-        					if (result.success) {
-            					this.render(result.message, null, false);  // 성공 메시지 출력
-            					document.getElementById("point").innerText = result.new_point;
-        					} 
-                        	else {
-            					this.render(result.message, null, false);  // 실패 메시지 출력
-        						}
-                    		}
-                    	else {
-                            this.render("그건 알 수 없는 말이야.", null, false)
-                        	}
-                    document.getElementById('image-upload').value = ''; // 이미지 필드 초기화 존재할 때를 조건으로 실행하는 경우도 있고 다시 같은 이미지 업로드해도 change가 발생하지 않는 경우도 있음
-                	}
-                },
-                // Add a message when the Enter key is pressed
-                addMessageEnter: function (event) {
-                    if (event.keyCode === 13) {//엔터 키코드 엔터 눌렀을 때 addMessage 실행
-                        this.addMessage();
-                    }   
-                },
                 // Scroll to the bottom of the chat history
                 scrollToBottom: function () {
                     this.chatHistory.scrollTop = this.chatHistory.scrollHeight;//현재 스크롤 위치값을 스크롤 가능한 최대 높이 chat-chatHistory는 채팅창 DOM임
@@ -776,7 +807,7 @@
                     
                 },
                 // 이미지 미리보기 함수
-                previewImage: function() {
+                /*previewImage: function() {
                     this.scrollToBottom();
                     const imageFile = document.getElementById('image-upload').files[0];
                     if (imageFile) {
@@ -784,7 +815,7 @@
                         this.render('', imageUrl, true);
                         document.getElementById('image-upload').value = '';// 빈 메시지로 이미지만 렌더링 화면에 띄워줌
                     }
-                },
+                },*/
             };
             chat.init();//채팅기능 초기화 실행, 드래그앤드롭기능 설정 실행
             chat.initDragAndDrop();
