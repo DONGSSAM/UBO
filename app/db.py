@@ -1,10 +1,12 @@
 from pymongo import MongoClient
+import gridfs
 
 uri = "mongodb+srv://glddiglddi:dkdk1378@user.y0fcfhd.mongodb.net/?retryWrites=true&w=majority&appName=User"
 client = MongoClient(uri)
 db = client['mydatabase']
 users = db['users']
 chat_rooms = db['chat_rooms']
+fs = gridfs.GridFS(db)
 
 def check_connection():
     try:

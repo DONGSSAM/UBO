@@ -2,12 +2,13 @@ from flask import Flask, render_template, request, Response, url_for, redirect, 
 from datetime import datetime
 from flask_socketio import SocketIO, emit
 import sys, bcrypt, qrcode
-from db import users, check_connection,  chat_rooms
+from db import users, check_connection,  chat_rooms, fs
 from bson.objectid import ObjectId
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 102 # 500MB제한
 app.config['SECRET_KEY'] = "your-very-secret-key"
 
 # 계정관련 코드
@@ -240,6 +241,15 @@ def handle_message(data):
     message = data.get('message', '')
     time = data.get('time', '')
     emit('message', {'user': user, 'message': message, 'time': time}, broadcast=True)
+
+@app.route("/fileUpload", methods=["POST"])
+def upload_image():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "No file"}), 400
+    
+    file_id = fs.put(file, filename=file.filename, content_type=file.content_type)
+    return jsonify({"success": True, "file_id": str(file_id)})
 
 
 
