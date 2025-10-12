@@ -510,9 +510,9 @@
             </div>
             <div class="message my-message float-right">
                 {{messageOutput}}
-                {{#if imageUrl}}
+                {{#if fileUrl}}
                 	<div class="center-image">
-                    	<img src="{{imageUrl}}" alt="Uploaded Image" style="max-width: 250px; display: inline; margin: 10px;">
+                    	<img src="{{fileUrl}}" alt="Uploaded Image" style="max-width: 250px; display: inline; margin: 10px;">
                     </div> <!-- end center-image -->
                 {{/if}}
             </div>
@@ -533,9 +533,9 @@
                     <div class="loading-dots"><span></span><span></span><span></span></div>
                 {{else}}
                     {{{messageOutput}}}
-                    {{#if imageUrl}}
+                    {{#if fileUrl}}
                         <div style="display: flex; justify-content: center; align-items: center;">
-                            <img src="{{imageUrl}}" alt="Uploaded Image" style="max-width: 200px; display: block; margin: 10px;">
+                            <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width: 200px; display: block; margin: 10px;">
                         </div>
                     {{/if}}
                 {{/if}}                
@@ -587,7 +587,7 @@
                 },
                 
                 //input요소에 파일을 강제로 넣어주는 함수
-                /*uploadFile: function (file) {
+                uploadFile: function (file) {
                     const MAX_SIZE = 500 * 1024 * 1024; // 500MB
 
                     if (file.size > MAX_SIZE) {
@@ -602,7 +602,7 @@
             
                     // 미리보기 기능을 호출합니다. 밑에 함수 있음 이미지 랜더링해서 미리보기만 띄우기
                     this.previewImage();
-                },*/
+                },
                 // Cache DOM elements
                 cacheDOM: function () {
                     this.chatHistory = document.querySelector('.chat-history');
@@ -620,14 +620,27 @@
                 initSocket: function () {
                     
                     this.socket = io(); // 서버와의 소켓 연결 초기화
-                    this.socket.on('message', ({ user, message, time }) => {
+                    this.socket.on('message', ({ user, message, time, fileUrl }) => {
                         const currentUser = "{{ username }}"; // 템플릿 변수로 현재 사용자 이름 전달
                         if (user === currentUser) return; // 내가 보낸 메시지는 무시
-                        this.render(user, time, message, null, false); // 서버로부터 메시지를 받으면 렌더링
+                        this.render(user, time, message, fileUrl, false); // 서버로부터 메시지를 받으면 렌더링
                     });
                 },
+                
+                //서버로 emit하는 함수//이미지는 나중에 로직짜기
+                emitMessage: function(user, message, fileUrl = null) {
+                    const now = new Date();
+                    const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                    this.socket.emit('message', {
+                        user: user,
+                        message: message,
+                        time: time,
+                        fileUrl: fileUrl
+                    });
+                },
+
                 // Render a new message isUser이 true이면 사용자메세지 false이면 상대방 메세지
-                render: function (user, time, message, imageUrl, isUser) {
+                render: function (user, time, message, fileUrl, isUser) {
 
                     const templateId = isUser ? "#message-template" : "#message-response-template";//isUser가 true이면 앞에 값, false면 뒤에 값 할당                    
 
@@ -637,7 +650,7 @@
                     const context = {
                         username: user,
                         messageOutput: message,
-                        imageUrl: imageUrl, 
+                        fileUrl: fileUrl, 
                         time: time
                     };
 
@@ -655,16 +668,7 @@
                         this.textarea.value = '';
                     }
                 },
-                //서버로 emit하는 함수//이미지는 나중에 로직짜기
-                emitMessage: function(user, message, imageUrl = null) {
-                    const now = new Date();
-                    const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                    this.socket.emit('message', {
-                        user: user,
-                        message: message,
-                        time: time
-                    });
-                },
+
                 // Add a message and its response
                 addMessage: async function () {
                     const now = new Date();
@@ -814,20 +818,22 @@
                     
                 },
                 // 이미지 미리보기 함수
-                /*previewImage: function() {
+                previewImage: function() {
                 
                     this.scrollToBottom();
                     const uploadedFile = document.getElementById('file-upload').files[0];
                     if (uploadedFile) {
-                        const formData = new FormData();
+                        username = "{{ username }}";
+                        const formData = new FormData();//서버에 파일 보내서 url만들어서 받아오기
                         formData.append("file", file);
+                        formData.append("admin", "{{ room_name }}");//템플릿 변수로 현재 채팅방 관리자 이름 전달
                         fetch("/fileUpload", { method: "POST", body: formData });
                         
-                        const imageUrl = URL.createObjectURL(uploadedFile);//브라우저가 랜더링 할 수 있도록 임시로 이미지 url을 만들어 줌
-                        this.render('', imageUrl, true);
-                        document.getElementById('file-upload').value = '';// 빈 메시지로 이미지만 렌더링 화면에 띄워줌
+                        const fileUrl = URL.createObjectURL(uploadedFile);//브라우저가 랜더링 할 수 있도록 임시로 이미지 url을 만들어 줌
+                        this.render(username,'', fileUrl, true);//일단 채팅방으로 바로 보내기 서버 응답 기다려서 서버 url로 랜더링하는거 만들기
+                        document.getElementById('file-upload').value = '';//인풋 초기화
                     }
-                },*/
+                },
             };
             chat.init();//채팅기능 초기화 실행, 드래그앤드롭기능 설정 실행
             chat.initDragAndDrop();

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify
+from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify, send_file
 from datetime import datetime
 from flask_socketio import SocketIO, emit
 import sys, bcrypt, qrcode
@@ -235,23 +235,41 @@ def get_room_name(user, role, session_username):
         return "권한 없음", 403
     
 # 실시간 채팅 관련 코드
+
 @socketio.on('message')
 def handle_message(data):
     user = data.get('user', '익명')#username이 페이지렌더링할때 이름이랑 겹쳐서 user로 바꿈
     message = data.get('message', '')
     time = data.get('time', '')
-    emit('message', {'user': user, 'message': message, 'time': time}, broadcast=True)
+    fileUrl = data.get('fileUrl', None)  # 파일 URL 추가
+    emit('message', {'user': user, 'message': message, 'time': time, 'fileUrl': fileUrl}, broadcast=True)
 
 @app.route("/fileUpload", methods=["POST"])
 def upload_image():
+    admin = request.form.get("admin")  # 어떤 채팅방(관리자)에서 파일을 업로드할지 프론트에서 전달해야 함
     file = request.files.get("file")
     if not file:
         return jsonify({"error": "No file"}), 400
-    
-    file_id = fs.put(file, filename=file.filename, content_type=file.content_type)
-    return jsonify({"success": True, "file_id": str(file_id)})
+    # 파일을 GridFS에 저장
+    file_id = fs.put(
+        file, 
+        filename=file.filename, 
+        content_type=file.content_type,
+        admin=admin
+        )
 
+    #파일 접근 URL 생성
+    file_url = url_for('get_file', file_id=str(file_id), _external=True)
+    return jsonify({"success": True, "file_id": str(file_id), "file_url": file_url, "admin": admin})
 
+# 파일 조회 file_url 을 <img src="{{ file_url }}"> 로 쓰면 이미지 렌더링됨
+@app.route("/file/<file_id>")
+def get_file(file_id):
+    file = fs.get(ObjectId(file_id))
+    content_type = file.content_type or 'application/octet-stream'
+    if content_type.startswith('image/'):
+        return Response(file.read(), mimetype=content_type)
+    return send_file(file, mimetype=content_type, download_name=file.filename)
 
 # 포인트 관련 코드
 
