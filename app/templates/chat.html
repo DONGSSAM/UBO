@@ -510,10 +510,13 @@
             </div>
             <div class="message my-message float-right">
                 {{messageOutput}}
+                <!-- if fileUUrl로 한번 막고 isImage로 분류하기-->
                 {{#if fileUrl}}
-                	<div class="center-image">
-                    	<img src="{{fileUrl}}" alt="Uploaded Image" style="max-width: 250px; display: inline; margin: 10px;">
-                    </div> <!-- end center-image -->
+                    {{#if isImage}}
+                        <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
+                    {{else}}
+                        <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
+                    {{/if}}
                 {{/if}}
             </div>
       </li>
@@ -533,12 +536,13 @@
                     <div class="loading-dots"><span></span><span></span><span></span></div>
                 {{else}}
                     {{{messageOutput}}}
-                    {{#if fileUrl}}
-                        <div style="display: flex; justify-content: center; align-items: center;">
-                            <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width: 200px; display: block; margin: 10px;">
-                        </div>
+                {{#if fileUrl}}
+                    {{#if isImage}}
+                        <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
+                    {{else}}
+                        <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
                     {{/if}}
-                {{/if}}                
+                {{/if}}            
             </div>
         </li>      
         {% endraw %}
@@ -585,24 +589,7 @@
                 handleFiles: function (files) {
                     ([...files]).forEach(this.uploadFile.bind(this));//파일을 배열형태로 업로드함
                 },
-                
-                //input요소에 파일을 강제로 넣어주는 함수
-                uploadFile: function (file) {
-                    const MAX_SIZE = 500 * 1024 * 1024; // 500MB
 
-                    if (file.size > MAX_SIZE) {
-                        alert("500MB 이하 파일만 업로드 가능합니다.");
-                        return;
-                    }
-
-                    var fileInput = document.getElementById('file-upload');
-                    var dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(file);
-                    fileInput.files = dataTransfer.files;
-            
-                    // 파일 업로드 render 및 emit
-                    this.fileUpload();
-                },
                 // Cache DOM elements
                 cacheDOM: function () {
                     this.chatHistory = document.querySelector('.chat-history');
@@ -622,22 +609,26 @@
                 initSocket: function () {
                     
                     this.socket = io(); // 서버와의 소켓 연결 초기화
-                    this.socket.on('message', ({ user, message, time, fileUrl }) => {
+                    this.socket.on('message', ({ user, message, time }) => {
                         const currentUser = "{{ username }}"; // 템플릿 변수로 현재 사용자 이름 전달
-                        //if (user === currentUser) return; // 내가 보낸 메시지는 무시
+                        if (user === currentUser) return; // 내가 보낸 메시지는 무시
                         this.render(user, time, message, fileUrl, false); // 서버로부터 메시지를 받으면 렌더링
+                    });
+                    this.socket.on('file', ({ user, fileUrl, fileName, isImage, time }) => {
+                        const currentUser = "{{ username }}"; // 템플릿 변수로 현재 사용자 이름 전달
+                        const isUser = (user === currentUser);
+                        this.renderFile(user, time, fileUrl, isUser, isImage, fileName);
                     });
                 },
                 
-                //서버로 emit하는 함수//이미지는 나중에 로직짜기
-                emitMessage: function(user, message, fileUrl = null) {
+                //서버로 emit하는 함수
+                emitMessage: function(user, message) {
                     const now = new Date();
                     const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                     this.socket.emit('message', {
                         user: user,
                         message: message,
-                        time: time,
-                        fileUrl: fileUrl
+                        time: time
                     });
                 },
 
@@ -653,7 +644,7 @@
                         username: user,
                         messageOutput: message,
                         fileUrl: fileUrl, 
-                        time: time
+                        time: time,
                     };
 
                     let htmlString = template(context)
@@ -669,6 +660,24 @@
                         
                         this.textarea.value = '';
                     }
+                },
+                renderFile: function (user, time, fileUrl, isUser, isImage, fileName) {
+                    const templateId = isUser ? "#message-template" : "#message-response-template";
+                    const template = Handlebars.compile(document.querySelector(templateId).innerHTML);
+                    const context = {
+                        username: user,
+                        fileUrl: fileUrl,
+                        isImage: isImage,
+                        fileName: fileName,
+                        time: time,
+                    };
+                    let htmlString = template(context);
+                    if (isUser) {
+                        this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
+                    } else {
+                        this.chatHistoryList.lastElementChild.innerHTML = htmlString;
+                    }
+                    this.scrollToBottom();
                 },
 
                 // Add a message and its response
@@ -819,6 +828,38 @@
                     return currentDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
                     
                 },
+                
+                //input요소에 파일을 강제로 넣어주는 함수
+                uploadFile: function (file) {
+                    const MAX_SIZE = 500 * 1024 * 1024; // 500MB
+
+                    if (file.size > MAX_SIZE) {
+                        alert("500MB 이하 파일만 업로드 가능합니다.");
+                        return;
+                    }
+
+                    var fileInput = document.getElementById('file-upload');
+                    var dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    fileInput.files = dataTransfer.files;
+            
+                    // 파일 업로드 render 및 emit
+                    this.fileUpload();
+                },
+
+                emitFile: function(fileUrl, fileName) {
+                    const now = new Date();
+                    const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                    const username = "{{ username }}";
+                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName); // 확장자로 이미지 여부 판단
+                    this.socket.emit('file', {
+                        user: username,
+                        time: time,
+                        fileUrl: fileUrl,
+                        fileName: fileName,
+                        isImage: isImage
+                    });
+                },
                 // 파일 전달 함수
                 fileUpload: function() {                
                     this.scrollToBottom();
@@ -836,8 +877,7 @@
                                     const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                                     const fileUrl = data.file_url; // ✅ 서버에서 받은 진짜 URL
                                     const myFileUrl = URL.createObjectURL(uploadedFile);//브라우저가 랜더링 할 수 있도록 임시로 이미지 url을 만들어 줌
-                                    this.emitMessage("{{ username }}", "", fileUrl);
-                                    this.render("{{ username }}", time, "", myFileUrl, true);
+                                    this.emitFile(fileUrl, uploadedFile.name);
                                 }
                             });
                         document.getElementById('file-upload').value = '';//인풋 초기화

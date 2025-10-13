@@ -241,8 +241,16 @@ def handle_message(data):
     user = data.get('user', '익명')#username이 페이지렌더링할때 이름이랑 겹쳐서 user로 바꿈
     message = data.get('message', '')
     time = data.get('time', '')
-    fileUrl = data.get('fileUrl', None)  # 파일 URL 추가
-    emit('message', {'user': user, 'message': message, 'time': time, 'fileUrl': fileUrl}, broadcast=True)
+    emit('message', {'user': user, 'message': message, 'time': time}, broadcast=True)
+
+@socketio.on('file')
+def handle_file(data):
+    user = data.get('user', '익명')
+    fileUrl = data.get('fileUrl', '')
+    fileName = data.get('fileName', '')
+    isImage = data.get('isImage', False)
+    time = data.get('time', '')
+    emit('file', {'user': user, 'fileUrl': fileUrl, 'fileName': fileName, 'isImage': isImage, 'time': time}, broadcast=True)
 
 @app.route("/fileUpload", methods=["POST"])
 def upload_image():
