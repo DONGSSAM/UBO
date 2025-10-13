@@ -265,11 +265,13 @@ def upload_image():
 # 파일 조회 file_url 을 <img src="{{ file_url }}"> 로 쓰면 이미지 렌더링됨
 @app.route("/file/<file_id>")
 def get_file(file_id):
-    file = fs.get(ObjectId(file_id))
+    try:
+        file = fs.get(ObjectId(file_id))
+    except:
+        return "File not found", 404
+
     content_type = file.content_type or 'application/octet-stream'
-    if content_type.startswith('image/'):
-        return Response(file.read(), mimetype=content_type)
-    return send_file(file, mimetype=content_type, download_name=file.filename)
+    return Response(file.read(), mimetype=content_type)
 
 # 포인트 관련 코드
 

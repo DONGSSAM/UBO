@@ -826,12 +826,13 @@
                     if (uploadedFile) {
                         username = "{{ username }}";
                         const formData = new FormData();//서버에 파일 보내서 url만들어서 받아오기
-                        formData.append("file", file);
+                        formData.append("file", uploadedFile);
                         formData.append("admin", "{{ room_name }}");//템플릿 변수로 현재 채팅방 관리자 이름 전달
                         fetch("/fileUpload", { method: "POST", body: formData })
                             .then(res => res.json())
                             .then(data => {
                                 if (data.success) {
+                                    const now = new Date();
                                     const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                                     const fileUrl = data.file_url; // ✅ 서버에서 받은 진짜 URL
                                     const myFileUrl = URL.createObjectURL(uploadedFile);//브라우저가 랜더링 할 수 있도록 임시로 이미지 url을 만들어 줌
