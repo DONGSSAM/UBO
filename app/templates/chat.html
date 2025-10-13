@@ -600,8 +600,8 @@
                     dataTransfer.items.add(file);
                     fileInput.files = dataTransfer.files;
             
-                    // 미리보기 기능을 호출합니다. 밑에 함수 있음 이미지 랜더링해서 미리보기만 띄우기
-                    this.previewImage();
+                    // 파일 업로드 render 및 emit
+                    this.fileUpload();
                 },
                 // Cache DOM elements
                 cacheDOM: function () {
@@ -614,7 +614,9 @@
                 bindEvents: function () {
                     this.button.addEventListener('click', this.addMessage.bind(this));
                     this.textarea.addEventListener('keyup', this.addMessageEnter.bind(this));
-                    //document.getElementById('file-upload').addEventListener('change', this.previewImage.bind(this));//file-upload로 폼요소의 값이 변했을 때(input의 객체가 변했을때) previewImage함수 실행됨
+                    document.getElementById('file-upload').addEventListener('change', this.fileUpload.bind(this));
+                    //file-upload로 폼요소의 값이 변했을 때(input의 객체가 변했을때) previewImage함수 실행됨 
+                    // 바로 전송하게 하는데 전송하기 전 확인단계 넣기 태블릿으로 할 때 첨부 후 미리보기만 보여주고 전송버튼 누르면 전송하게 하기
                 },
                 //소켓서버에서 메세지 받았을 때 실행
                 initSocket: function () {
@@ -622,7 +624,7 @@
                     this.socket = io(); // 서버와의 소켓 연결 초기화
                     this.socket.on('message', ({ user, message, time, fileUrl }) => {
                         const currentUser = "{{ username }}"; // 템플릿 변수로 현재 사용자 이름 전달
-                        if (user === currentUser) return; // 내가 보낸 메시지는 무시
+                        //if (user === currentUser) return; // 내가 보낸 메시지는 무시
                         this.render(user, time, message, fileUrl, false); // 서버로부터 메시지를 받으면 렌더링
                     });
                 },
@@ -817,9 +819,8 @@
                     return currentDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
                     
                 },
-                // 이미지 미리보기 함수
-                previewImage: function() {
-                
+                // 파일 전달 함수
+                fileUpload: function() {                
                     this.scrollToBottom();
                     const uploadedFile = document.getElementById('file-upload').files[0];
                     if (uploadedFile) {
@@ -827,10 +828,17 @@
                         const formData = new FormData();//서버에 파일 보내서 url만들어서 받아오기
                         formData.append("file", file);
                         formData.append("admin", "{{ room_name }}");//템플릿 변수로 현재 채팅방 관리자 이름 전달
-                        fetch("/fileUpload", { method: "POST", body: formData });
-                        
-                        const fileUrl = URL.createObjectURL(uploadedFile);//브라우저가 랜더링 할 수 있도록 임시로 이미지 url을 만들어 줌
-                        this.render(username,'', fileUrl, true);//일단 채팅방으로 바로 보내기 서버 응답 기다려서 서버 url로 랜더링하는거 만들기
+                        fetch("/fileUpload", { method: "POST", body: formData })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                                    const fileUrl = data.file_url; // ✅ 서버에서 받은 진짜 URL
+                                    const myFileUrl = URL.createObjectURL(uploadedFile);//브라우저가 랜더링 할 수 있도록 임시로 이미지 url을 만들어 줌
+                                    this.emitMessage("{{ username }}", "", fileUrl);
+                                    this.render("{{ username }}", time, "", myFileUrl, true);
+                                }
+                            });
                         document.getElementById('file-upload').value = '';//인풋 초기화
                     }
                 },
