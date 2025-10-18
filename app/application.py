@@ -73,7 +73,7 @@ def register_admin():
 
     if role == "admin":
         chat_rooms.insert_one({
-            "name": f"{username}의 채팅방",
+            "name": f"{username}",
             "admin_name": username,
             "created_at": datetime.utcnow(),
             "point": 5000,
@@ -178,11 +178,11 @@ def chat_redirect():
     if not session_username:
         return redirect("/")
 
-    user = users.find_one({"username": session_username})
-    if not user:
+    user_doc = users.find_one({"username": session_username})
+    if not user_doc:
         return redirect("/")
 
-    room_name = get_room_name(user, role, session_username)
+    room_name = get_room_name(user_doc, role, session_username)
     if not room_name:
         return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
 
@@ -199,10 +199,10 @@ def chat_app(room_name):
     if not session_username:
         return redirect("/")
 
-    user = users.find_one({"username": session_username})
-    if not user:
+    user_doc = users.find_one({"username": session_username})
+    if not user_doc:
         return redirect("/")
-    room_name = get_room_name(user, role, session_username)
+    room_name = get_room_name(user_doc, role, session_username)
     if not room_name:
         return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
     
@@ -216,18 +216,21 @@ def chat_app(room_name):
             if user_info:
                 point = user_info.get("point", 0)
 
+    messages = chat_room.get("messages", [])
+
     return render_template("chat.html", 
                            username=session_username, 
                            point=point, 
                            role=role, 
                            room_name=room_name,
-                           time=time)
+                           time=time,
+                           messages=messages)
 
-def get_room_name(user, role, session_username):
+def get_room_name(user_doc, role, session_username):
     if role == "admin":
         return session_username
     elif role == "user":
-        chat_rooms_list = user.get("chat_rooms", [])
+        chat_rooms_list = user_doc.get("chat_rooms", [])
         if not chat_rooms_list:
             return None
         return chat_rooms_list[0]#채팅방 리스트 중에 첫번째로 이동함 나중에 채팅방 여러개면 선택하는 페이지 만들기
@@ -242,7 +245,21 @@ def handle_message(data):
     message = data.get('message', '')
     time = data.get('time', '')
     imageUrl = data.get('imageUrl', '')
-    
+    session_username = session.get("username")
+    user_doc = users.find_one({"username": session_username})
+    role = user_doc.get("role")
+    room_name = get_room_name(user_doc, role, session_username)
+    new_message = {
+        "user": user,
+        "message": message,
+        "time": time,
+        "fileUrl": imageUrl
+    }
+
+    chat_rooms.update_one(
+        {"admin_name": room_name},
+        {"$push": {"messages": {"$each": [new_message], "$slice": -1000}}}
+    )
     emit('message', {'user': user, 'message': message, 'time': time, 'fileUrl':imageUrl}, broadcast=True)
 
 @socketio.on('file')
@@ -258,6 +275,7 @@ def handle_file(data):
 def upload_image():
     admin = request.form.get("admin")  # 어떤 채팅방(관리자)에서 파일을 업로드할지 프론트에서 전달해야 함
     file = request.files.get("file")
+    username = request.form.get("username")
     if not file:
         return jsonify({"error": "No file"}), 400
     # 파일을 GridFS에 저장
@@ -265,7 +283,8 @@ def upload_image():
         file, 
         filename=file.filename, 
         content_type=file.content_type,
-        admin=admin
+        admin=admin,
+        uploaded_by=username
         )
 
     #파일 접근 URL 생성

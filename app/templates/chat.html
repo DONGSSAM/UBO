@@ -692,7 +692,7 @@
                     	await showBubblePromise //답변이 출력되고 버블링이 발생되는 현상 제어
                     	await waitPromise  //최소 2초는 버블링
                 		if (this.messageToSend === "!던져") {
-                        	await this.catchPokemon(username, -500);
+                        	await this.catchPokemon(user, -500);
                     		}
                         else if (this.messageToSend.startsWith("!전달")) {
                             const give = this.messageToSend.split(" ")
@@ -776,6 +776,14 @@
                             var loadingHtml = template(context);
                             this.chatHistoryList.insertAdjacentHTML('beforeend', loadingHtml);//chathistorylist의 마지막에 로딩중을 추가함
                             this.scrollToBottom();
+                            // 마지막으로 추가된 요소 가져오기
+                            const lastBubble = this.chatHistoryList.lastElementChild;
+
+                            // 일정 시간 뒤 제거
+                            setTimeout(() => {
+                                if (lastBubble) lastBubble.remove();
+                            }, 1000); // 2초 뒤 제거
+
                             resolve();
                         }, delay);
                     });
@@ -863,6 +871,7 @@
                         username = "{{ username }}";
                         const formData = new FormData();//서버에 파일 보내서 url만들어서 받아오기
                         formData.append("file", uploadedFile);
+                        formData.append("username", "{{ username }}");
                         formData.append("admin", "{{ room_name }}");//템플릿 변수로 현재 채팅방 관리자 이름 전달
                         fetch("/fileUpload", { method: "POST", body: formData })
                             .then(res => res.json())
