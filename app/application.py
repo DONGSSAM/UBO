@@ -241,7 +241,9 @@ def handle_message(data):
     user = data.get('user', '익명')#username이 페이지렌더링할때 이름이랑 겹쳐서 user로 바꿈
     message = data.get('message', '')
     time = data.get('time', '')
-    emit('message', {'user': user, 'message': message, 'time': time}, broadcast=True)
+    imageUrl = data.get('imageUrl', '')
+    
+    emit('message', {'user': user, 'message': message, 'time': time, 'fileUrl':imageUrl}, broadcast=True)
 
 @socketio.on('file')
 def handle_file(data):

@@ -527,7 +527,7 @@
         {% raw %}
         <li class="clearfix">
             <div class="message-data">
-                <img src="/static/images/trainer.png?v=1" class="face-image"?>
+                <img src="/static/images/trainer.png?v=1" class="face-image">
                 <span class="message-data-name">{{username}}</span>
                 <span class="message-data-time">{{time}}</span>
             </div>
@@ -536,15 +536,16 @@
                     <div class="loading-dots"><span></span><span></span><span></span></div>
                 {{else}}
                     {{{messageOutput}}}
-                {{#if fileUrl}}
-                    {{#if isImage}}
-                        <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
-                    {{else}}
-                        <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
+                    {{#if fileUrl}}
+                        {{#if isImage}}
+                            <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
+                        {{else}}
+                            <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
+                        {{/if}}
                     {{/if}}
-                {{/if}}            
+                {{/if}}
             </div>
-        </li>      
+        </li>
         {% endraw %}
     </script>
     <script>
@@ -609,31 +610,32 @@
                 initSocket: function () {
                     
                     this.socket = io(); // 서버와의 소켓 연결 초기화
-                    this.socket.on('message', ({ user, message, time }) => {
+                    this.socket.on('message', ({ user, message, time, fileUrl }) => {
                         const currentUser = "{{ username }}"; // 템플릿 변수로 현재 사용자 이름 전달
                         if (user === currentUser) return; // 내가 보낸 메시지는 무시
-                        this.render(user, time, message, fileUrl, false); // 서버로부터 메시지를 받으면 렌더링
+                        this.render({user:user, time, message, fileUrl}); // 서버로부터 메시지를 받으면 렌더링
                     });
                     this.socket.on('file', ({ user, fileUrl, fileName, isImage, time }) => {
                         const currentUser = "{{ username }}"; // 템플릿 변수로 현재 사용자 이름 전달
-                        const isUser = (user === currentUser);
-                        this.renderFile(user, time, fileUrl, isUser, isImage, fileName);
+                        const isUser = (user === currentUser);//내가보낸파일이면 true, 아니면 false
+                        this.renderFile({user:user, time, fileUrl, isUser, isImage, fileName});
                     });
                 },
                 
                 //서버로 emit하는 함수
-                emitMessage: function(user, message) {
+                emitMessage: function(user, message, imageUrl=null) {
                     const now = new Date();
                     const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                     this.socket.emit('message', {
                         user: user,
                         message: message,
-                        time: time
+                        time: time,
+                        imageUrl: imageUrl
                     });
                 },
 
                 // Render a new message isUser이 true이면 사용자메세지 false이면 상대방 메세지
-                render: function (user, time, message, fileUrl, isUser) {
+                render: function ({user, time, message, fileUrl=null, isUser=false, isImage=true}) {
 
                     const templateId = isUser ? "#message-template" : "#message-response-template";//isUser가 true이면 앞에 값, false면 뒤에 값 할당                    
 
@@ -645,15 +647,12 @@
                         messageOutput: message,
                         fileUrl: fileUrl, 
                         time: time,
+                        isImage: isImage
                     };
 
                     let htmlString = template(context)
-                    if (isUser) {
-                    	this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
-                    }//채팅창에 동적으로 html추가, 추가된 후 자동 스크롤 내림
-                    else {
-                        this.chatHistoryList.lastElementChild.innerHTML = htmlString;
-                    }
+                    this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
+
                     this.scrollToBottom();
 
                     if (isUser) {
@@ -661,7 +660,7 @@
                         this.textarea.value = '';
                     }
                 },
-                renderFile: function (user, time, fileUrl, isUser, isImage, fileName) {
+                renderFile: function ({user, time, fileUrl, isUser, isImage, fileName}) {
                     const templateId = isUser ? "#message-template" : "#message-response-template";
                     const template = Handlebars.compile(document.querySelector(templateId).innerHTML);
                     const context = {
@@ -672,11 +671,7 @@
                         time: time,
                     };
                     let htmlString = template(context);
-                    if (isUser) {
-                        this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
-                    } else {
-                        this.chatHistoryList.lastElementChild.innerHTML = htmlString;
-                    }
+                    this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
                     this.scrollToBottom();
                 },
 
@@ -684,12 +679,12 @@
                 addMessage: async function () {
                     const now = new Date();
                     const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                    const username = "{{ username }}";
+                    const user = '{{ username }}';
                     const formData = new FormData();//FormData는 서버에 보낼 데이터를 딕셔너리 형식으로 추가할 수 있게 하는 객체를 만들어주는 함수임
                     this.messageToSend = this.textarea.value.trim();//textarea의 dom요소에 입력값을 공백 제거해서 가져옴
                     if (this.messageToSend){
-                        this.render(username, time, this.messageToSend, null, true);//내 메세지는 랜더 후 emit
-                        this.emitMessage(username, this.messageToSend);
+                        this.render({user:user, time, message: this.messageToSend, isUser: true});//내 메세지는 랜더 후 emit
+                        this.emitMessage(user, this.messageToSend);
                     	}//render함수로 내가 보낸 메세지를 먼저 채팅창에 띄워줌
                     if (this.messageToSend.startsWith("!")){
                     	showBubblePromise = this.showBubbleAfterSeconds(500)
