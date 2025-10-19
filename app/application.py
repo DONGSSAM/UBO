@@ -274,6 +274,7 @@ def handle_message(data):
     message = data.get('message', '')
     time = data.get('time', '')
     imageUrl = data.get('imageUrl', '')
+    isFile = False
     session_username = session.get("username")
     user_doc = users.find_one({"username": session_username})
     role = user_doc.get("role")
@@ -282,7 +283,8 @@ def handle_message(data):
         "user": user,
         "message": message,
         "time": time,
-        "fileUrl": imageUrl
+        "fileUrl": imageUrl,
+        "isFile": isFile
     }
 
     chat_rooms.update_one(
@@ -298,6 +300,25 @@ def handle_file(data):
     fileName = data.get('fileName', '')
     isImage = data.get('isImage', False)
     time = data.get('time', '')
+    isFile = True
+    session_username = session.get("username")
+    user_doc = users.find_one({"username": session_username})
+    role = user_doc.get("role")
+    room_name = get_room_name(user_doc, role, session_username)
+    new_message = {
+        "user": user,
+        "fileUrl": fileUrl,
+        "fileName": fileName,
+        "isImage": isImage,
+        "time": time,
+        "isFile": isFile
+    }
+
+    chat_rooms.update_one(
+        {"admin_name": room_name},
+        {"$push": {"messages": {"$each": [new_message], "$slice": -200}}}
+    )
+
     emit('file', {'user': user, 'fileUrl': fileUrl, 'fileName': fileName, 'isImage': isImage, 'time': time}, broadcast=True)
 
 @app.route("/fileUpload", methods=["POST"])

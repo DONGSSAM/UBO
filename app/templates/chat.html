@@ -587,12 +587,24 @@
                     const currentUser = "{{ username }}";
  
                     initialMessages.forEach(m => {
-                        const user = m.user;
-                        const message = m.message;
-                        const fileUrl = m.fileUrl || null;
-                        const time = m.time;
-                        const isUser = (user === currentUser);
-                        this.render({ user, time, message, fileUrl, isUser});
+                        const isFile = m.isFile;
+                        if (isFile) {
+                            const user = m.user;
+                            const fileUrl = m.fileUrl;
+                            const fileName = m.fileName;
+                            const isImage = m.isImage;
+                            const time = m.time;
+                            const isUser = (user === currentUser);
+                            this.renderFile({ user, time, fileUrl, isUser, isImage, fileName });
+                        }
+                        else {
+                            const user = m.user;
+                            const message = m.message;
+                            const fileUrl = m.fileUrl || null;
+                            const time = m.time;
+                            const isUser = (user === currentUser);
+                            this.render({ user, time, message, fileUrl, isUser});
+                        }
                     });
                 },            
                 handleDrop: function (e) {//파일을 차례대로 업로드하는 함수 이벤트에 대해 실행할 함수를 설정함
