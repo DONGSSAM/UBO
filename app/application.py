@@ -189,6 +189,24 @@ def chat_redirect():
     # 최종적으로 같은 주소로 이동
     return redirect(f"/chat/{room_name}")
 
+# 채팅 메시지 직렬화 함수
+def serialize_value(v):
+    import base64
+    if isinstance(v, ObjectId):
+        return str(v)
+    if isinstance(v, datetime):
+        return v.strftime('%H:%M')
+    if isinstance(v, dict):
+        return {kk: serialize_value(vv) for kk, vv in v.items()}
+    if isinstance(v, list):
+        return [serialize_value(i) for i in v]
+    if isinstance(v, (bytes, bytearray)):
+        # 우선 텍스트로 디코딩 시도, 실패하면 base64 문자열로 변환
+        try:
+            return v.decode('utf-8')
+        except Exception:
+            return base64.b64encode(bytes(v)).decode('ascii')
+    return v
 
 @app.route("/chat/<room_name>")
 def chat_app(room_name):
@@ -206,7 +224,7 @@ def chat_app(room_name):
     if not room_name:
         return "채팅방이 없습니다. 관리자에게 문의하세요.", 403
     
-    chat_room = chat_rooms.find_one({"admin_name": room_name})
+    chat_room = chat_rooms.find_one({"admin_name": room_name}, {"messages": {"$slice": -200}})
     point = 0
     if role =="admin":
         point = chat_room.get("point", 0) if chat_room else 0
@@ -216,7 +234,18 @@ def chat_app(room_name):
             if user_info:
                 point = user_info.get("point", 0)
 
-    messages = chat_room.get("messages", [])
+    raw_messages = chat_room.get("messages", []) if chat_room else []
+
+    messages = []
+    for m in raw_messages:
+        try:
+            # ensure mapping -> dict and serialize recursively
+            msg_dict = dict(m) if not isinstance(m, dict) else m
+        except Exception:
+            # fallback: keep raw if cannot convert
+            messages.append(m)
+            continue
+        messages.append(serialize_value(msg_dict))
 
     return render_template("chat.html", 
                            username=session_username, 
@@ -258,7 +287,7 @@ def handle_message(data):
 
     chat_rooms.update_one(
         {"admin_name": room_name},
-        {"$push": {"messages": {"$each": [new_message], "$slice": -1000}}}
+        {"$push": {"messages": {"$each": [new_message], "$slice": -200}}}
     )
     emit('message', {'user': user, 'message': message, 'time': time, 'fileUrl':imageUrl}, broadcast=True)
 

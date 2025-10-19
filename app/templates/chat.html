@@ -550,6 +550,7 @@
     </script>
     <script>
         (function () {<!-- 즉시실행함수 한번만 실행됨 초기화 내용 적용-->
+            var initialMessages = {{ messages|tojson|safe }}; // 서버에서 전달된 초기 메시지 데이터
             var chat = {
                 socket: null,
                 messageToSend: '',//메세지 창에 표시하는 형태로 메세지, 드롭된 파일 대해서 처리하는 로직
@@ -579,7 +580,21 @@
                     e.preventDefault();
                     e.stopPropagation();
                 },
-            
+               // Load initial messages passed from server and render them
+                loadInitialMessages: function (initialMessages) {
+                   // messages should be injected by Flask: messages = server-side list of dicts
+                    if (!Array.isArray(initialMessages) || initialMessages.length === 0) return;
+                    const currentUser = "{{ username }}";
+ 
+                    initialMessages.forEach(m => {
+                        const user = m.user;
+                        const message = m.message;
+                        const fileUrl = m.fileUrl || null;
+                        const time = m.time;
+                        const isUser = (user === currentUser);
+                        this.render({ user, time, message, fileUrl, isUser});
+                    });
+                },            
                 handleDrop: function (e) {//파일을 차례대로 업로드하는 함수 이벤트에 대해 실행할 함수를 설정함
                     let dt = e.dataTransfer;
                     let files = dt.files;
@@ -890,6 +905,7 @@
             };
             chat.init();//채팅기능 초기화 실행, 드래그앤드롭기능 설정 실행
             chat.initDragAndDrop();
+            chat.loadInitialMessages(initialMessages);//초기메세지 불러오기 실행
         })();
 
         function openModal(id) {
