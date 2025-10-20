@@ -147,6 +147,27 @@
             left: 17%;
         }
 
+        .chat-scroll-wrapper {
+        position: relative;
+        height: 100%;
+        width: calc(100% - 10px); /* 오른쪽에 여유공간 확보 */
+        overflow-y: scroll;
+        padding-right: 10px;
+        }
+
+        /* 스크롤바를 오른쪽에 별도로 스타일링 */
+        .chat-scroll-wrapper::-webkit-scrollbar {
+        width: 8px;
+        }
+
+        .chat-scroll-wrapper::-webkit-scrollbar-thumb {
+        background-color: #bbb;
+        border-radius: 4px;
+        }
+
+        .chat-scroll-wrapper::-webkit-scrollbar-track {
+        background-color: transparent;
+        }
         .chat .chat-message {
             padding: 5px 15px 0px 15px;
             background-color:#EFEFEF;
@@ -196,6 +217,20 @@
             border-radius: 50%;
             width: 30px;
             height: 30px;
+        }
+
+        .face-initial {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-family: 'NanumGothic', sans-serif;
+            font-size: 14px;
+            line-height: 1;
         }
 
          /* Added on 2023-08-22: Waiting animation styles */
@@ -397,10 +432,12 @@
 
             </div> <!-- end chat-header -->
 
-            <div class="chat-history"> 
+            <div class="chat-history">
+            <div class="chat-scroll-wrapper">
                 <ul style="list-style:none;">
-
+                <!-- 채팅 메시지 li들이 여기에 들어감 -->
                 </ul>
+            </div>
             </div> <!-- end chat-history -->
 
             <div class="chat-message">
@@ -501,8 +538,8 @@
 
     <audio id="audioPlayer" controls style="display:none"></audio>
     <!-- 핸들바 템플릿 사용해서 메세지를 동적으로 랜더링하기위한 템플릿 js가 동적으로 메세지를 읽고 붙임 메세지 변수에 담아서 템플릿의 매개변수로 함수실행함 -->
-     <script id="message-template" type="text/x-handlebars-template"> 
-         {% raw %}
+    <script id="message-template" type="text/x-handlebars-template"> 
+        {% raw %}
         <li class="clearfix">
             <div class="message-data align-right">                
                 <span class="message-data-name" >{{username}}</span>
@@ -527,7 +564,11 @@
         {% raw %}
         <li class="clearfix">
             <div class="message-data">
-                <img src="/static/images/trainer.png?v=1" class="face-image">
+                {{#if isBot}}
+                    <img src="/static/images/trainer.png?v=1" class="face-image">
+                {{else}}
+                    <div class="face-initial" style="background-color: {{initialBg}};">{{initial}}</div>
+                {{/if}}
                 <span class="message-data-name">{{username}}</span>
                 <span class="message-data-time">{{time}}</span>
             </div>
@@ -537,8 +578,8 @@
                 {{else}}
                     {{{messageOutput}}}
                     {{#if fileUrl}}
-                        {{#if isImage}}
-                            <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
+                        {{#if isImage}}max
+                            <img src="{{fileUrl}}" alt="Uploaded Image" style="-width:250px; display:inline; margin:10px;">
                         {{else}}
                             <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
                         {{/if}}
@@ -661,8 +702,29 @@
                     });
                 },
 
+                //render관련 함수
+                stringToColor: function (str) {
+                    if (!str) return '#777'; // 이름이 없으면 기본 회색
+                    let hash = 0;
+                    for (let i = 0; i < str.length; i++) {
+                        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                        hash = hash & hash; // 정수 오버플로 방지
+                    }
+                    let color = '#';
+                    for (let i = 0; i < 3; i++) {
+                        const value = (hash >> (i * 8)) & 0xFF; // RGB 각 채널 추출
+                        color += ('00' + value.toString(16)).slice(-2);
+                    }
+                    return color;
+                },
                 // Render a new message isUser이 true이면 사용자메세지 false이면 상대방 메세지
                 render: function ({user, time, message, fileUrl=null, isUser=false, isImage=true}) {
+                    const name = (typeof user === 'object' && user !== null)
+                        ? (user.name || user.username || '')
+                        : (user || '');
+                    const initial = name.charAt(0).toUpperCase() || '?';
+                    const isBot = (user === "칭찬맨"); // 봇 이름을 여기서 명시. 필요하면 조건 확장
+                    const initialBg = this.stringToColor(user || initial);
 
                     const templateId = isUser ? "#message-template" : "#message-response-template";//isUser가 true이면 앞에 값, false면 뒤에 값 할당                    
 
@@ -674,7 +736,10 @@
                         messageOutput: message,
                         fileUrl: fileUrl, 
                         time: time,
-                        isImage: isImage
+                        isImage: isImage,
+                        initial: initial,
+                        initialBg: initialBg,
+                        isBot: isBot
                     };
 
                     let htmlString = template(context)
