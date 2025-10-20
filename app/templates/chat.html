@@ -444,6 +444,7 @@
                 <span class=info></span>
                 <textarea name="message-to-send" id="message-to-send" placeholder="메시지를 입력하세요." rows="1"></textarea> 
                 <div>
+                    
                     <input type="file" id="file-upload" style="display:none">
                     <button id="send" style="display:none">Send</button>
                 </div>
@@ -578,8 +579,8 @@
                 {{else}}
                     {{{messageOutput}}}
                     {{#if fileUrl}}
-                        {{#if isImage}}max
-                            <img src="{{fileUrl}}" alt="Uploaded Image" style="-width:250px; display:inline; margin:10px;">
+                        {{#if isImage}}
+                            <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
                         {{else}}
                             <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
                         {{/if}}
@@ -720,8 +721,8 @@
                 // Render a new message isUser이 true이면 사용자메세지 false이면 상대방 메세지
                 render: function ({user, time, message, fileUrl=null, isUser=false, isImage=true}) {
                     const name = (typeof user === 'object' && user !== null)
-                        ? (user.name || user.username || '')
-                        : (user || '');
+                        ? (user.name || user.username || '?')
+                        : (user || '?');
                     const initial = name.charAt(0).toUpperCase() || '?';
                     const isBot = (user === "칭찬맨"); // 봇 이름을 여기서 명시. 필요하면 조건 확장
                     const initialBg = this.stringToColor(user || initial);
