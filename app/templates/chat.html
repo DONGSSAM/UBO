@@ -441,13 +441,19 @@
             </div> <!-- end chat-history -->
 
             <div class="chat-message">
+                <div c;ass="chat-controls">
+                    <!-- 사진 첨부 버튼 -->
+                    <label for="image-upload" class="chat-btn">📷</label>
+                    <input type="file" id="image-upload" accept="image/*" style="display:none">
+
+                    <!-- 일반 파일 첨부 버튼 -->
+                    <label for="file-upload" class="chat-btn">📎</label>
+                    <input type="file" id="file-upload" style="display:none">
+
+                </div>                
                 <span class=info></span>
                 <textarea name="message-to-send" id="message-to-send" placeholder="메시지를 입력하세요." rows="1"></textarea> 
-                <div>
-                    
-                    <input type="file" id="file-upload" style="display:none">
-                    <button id="send" style="display:none">Send</button>
-                </div>
+                <button id="send" class="chat-btn">➡️</button>
             </div> <!-- end chat-message -->
         </div> <!-- end chat -->
     </div> <!-- end container -->
@@ -648,6 +654,7 @@
                             this.render({ user, time, message, fileUrl, isUser});
                         }
                     });
+                    this.scrollToBottom();
                 },            
                 handleDrop: function (e) {//파일을 차례대로 업로드하는 함수 이벤트에 대해 실행할 함수를 설정함
                     let dt = e.dataTransfer;
@@ -662,7 +669,7 @@
 
                 // Cache DOM elements
                 cacheDOM: function () {
-                    this.chatHistory = document.querySelector('.chat-history');
+                    this.chatHistory = document.querySelector('.chat-scroll-wrapper') || document.querySelector('.chat-history');
                     this.button = document.querySelector('#send');
                     this.textarea = document.getElementById('message-to-send');
                     this.chatHistoryList = this.chatHistory.querySelector('ul');
@@ -746,7 +753,14 @@
                     let htmlString = template(context)
                     this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
 
-                    this.scrollToBottom();
+                    const lastItem = this.chatHistoryList.lastElementChild;
+                    const img = lastItem && lastItem.querySelector('img');
+                    if (img) {
+                        img.addEventListener('load', () => this.scrollToBottom());
+                        if (img.complete) this.scrollToBottom();
+                    } else {
+                        this.scrollToBottom();
+                    }
 
                     if (isUser) {
                         
@@ -765,7 +779,14 @@
                     };
                     let htmlString = template(context);
                     this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
-                    this.scrollToBottom();
+                    const lastItem = this.chatHistoryList.lastElementChild;
+                    const img = lastItem && lastItem.querySelector('img');
+                    if (img) {
+                        img.addEventListener('load', () => this.scrollToBottom());
+                        if (img.complete) this.scrollToBottom();
+                    } else {
+                        this.scrollToBottom();
+                    }
                 },
 
                 // Add a message and its response
@@ -916,7 +937,9 @@
 
                 // Scroll to the bottom of the chat history
                 scrollToBottom: function () {
-                    this.chatHistory.scrollTop = this.chatHistory.scrollHeight;//현재 스크롤 위치값을 스크롤 가능한 최대 높이 chat-chatHistory는 채팅창 DOM임
+                    requestAnimationFrame(() => {
+                        this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+                    });                
                 },
                 // Get the current time
                 getCurrentTime: function () {
