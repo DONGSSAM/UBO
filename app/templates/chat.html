@@ -754,17 +754,20 @@
                     this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
 
                     const lastItem = this.chatHistoryList.lastElementChild;
-                    const img = lastItem && lastItem.querySelector('img');
-                    if (img) {
-                        img.addEventListener('load', () => this.scrollToBottom());
-                        if (img.complete) this.scrollToBottom();
+                    const imgs = lastItem ? lastItem.querySelectorAll('img') : [];
+                    if (imgs.length > 0) {
+                        const promises = Array.from(imgs).map(img => new Promise(resolve => {
+                            if (img.complete) return resolve();
+                            const onLoad = () => { img.removeEventListener('load', onLoad); resolve(); };
+                            img.addEventListener('load', onLoad);
+                            setTimeout(resolve, 3000);
+                        }));
+                        Promise.all(promises).then(() => {
+                            this.scrollToBottom();
+                            setTimeout(() => this.scrollToBottom(), 50);
+                        });
                     } else {
                         this.scrollToBottom();
-                    }
-
-                    if (isUser) {
-                        
-                        this.textarea.value = '';
                     }
                 },
                 renderFile: function ({user, time, fileUrl, isUser, isImage, fileName}) {
@@ -779,11 +782,20 @@
                     };
                     let htmlString = template(context);
                     this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
+
                     const lastItem = this.chatHistoryList.lastElementChild;
-                    const img = lastItem && lastItem.querySelector('img');
-                    if (img) {
-                        img.addEventListener('load', () => this.scrollToBottom());
-                        if (img.complete) this.scrollToBottom();
+                    const imgs = lastItem ? lastItem.querySelectorAll('img') : [];
+                    if (imgs.length > 0) {
+                        const promises = Array.from(imgs).map(img => new Promise(resolve => {
+                            if (img.complete) return resolve();
+                            const onLoad = () => { img.removeEventListener('load', onLoad); resolve(); };
+                            img.addEventListener('load', onLoad);
+                            setTimeout(resolve, 3000);
+                        }));
+                        Promise.all(promises).then(() => {
+                            this.scrollToBottom();
+                            setTimeout(() => this.scrollToBottom(), 50);
+                        });
                     } else {
                         this.scrollToBottom();
                     }
