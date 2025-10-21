@@ -89,6 +89,30 @@
             height: 575px;
         }
 
+        .chat-input-wrapper {
+            position: relative;      /* 내부 요소 위치 기준 */
+            width: 100%;
+            display: block;
+        }
+        #message-to-send {
+            width: 100%;
+            padding: 10px 20px; /* 오른쪽 버튼 공간 확보 */
+            box-sizing: border-box;       /* 패딩 포함 너비 계산 */
+        }
+
+        #send {
+            position: absolute;
+            right: 1px;
+            top: 33%;
+            transform: translateY(-50%);
+            border: none;
+            background-color: white;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 22px;
+        }
+
         /* Chrome, Safari, Edge */
         .chat .chat-history::-webkit-scrollbar {
             display: none;
@@ -176,7 +200,7 @@
         .chat .chat-message textarea {
             width: 100%;
             border: none;
-            padding: 10px 20px;
+            padding: 10px 50px 10px 20px;
             font: 14px/22px "Lato", Arial, sans-serif;
             border-radius: 15px;
             resize: none;
@@ -408,6 +432,24 @@
             gap: 5px;
             font-size: 14px;
         }
+        .chat-btn {
+            background-color: #f0f0f0; /* 기본 버튼 배경색 */
+            color: #000;               /* 글자색 */
+            border: none;              /* 테두리 제거 */
+            border-radius: 5px;        /* 모서리 둥글게 */
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        /* 마우스를 올렸을 때 */
+        .chat-btn:hover,
+        .chat-btn:focus,
+        .chat-btn:active {
+            background-color: #e0e0e0; /* 마우스 올렸을 때 살짝 어둡게 */
+            outline: none;
+        }
+
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
@@ -441,19 +483,20 @@
             </div> <!-- end chat-history -->
 
             <div class="chat-message">
-                <div c;ass="chat-controls">
+                <div class="chat-controls">
                     <!-- 사진 첨부 버튼 -->
                     <label for="image-upload" class="chat-btn">📷</label>
                     <input type="file" id="image-upload" accept="image/*" style="display:none">
 
                     <!-- 일반 파일 첨부 버튼 -->
                     <label for="file-upload" class="chat-btn">📎</label>
-                    <input type="file" id="file-upload" style="display:none">
-
-                </div>                
-                <span class=info></span>
-                <textarea name="message-to-send" id="message-to-send" placeholder="메시지를 입력하세요." rows="1"></textarea> 
-                <button id="send" class="chat-btn">➡️</button>
+                    <input type="file" id="file-upload" style="display:none">            
+                    <span class=info></span>
+                    <div class="chat-input-wrapper">
+                        <textarea name="message-to-send" id="message-to-send" placeholder="메시지를 입력하세요." rows="1"></textarea> 
+                        <button id="send" class="chat-btn">➡️</button>
+                    </div>
+                </div>
             </div> <!-- end chat-message -->
         </div> <!-- end chat -->
     </div> <!-- end container -->
@@ -811,6 +854,7 @@
                     if (this.messageToSend){
                         this.render({user:user, time, message: this.messageToSend, isUser: true});//내 메세지는 랜더 후 emit
                         this.emitMessage(user, this.messageToSend);
+                        this.textarea.value = '';
                     	}//render함수로 내가 보낸 메세지를 먼저 채팅창에 띄워줌
                     if (this.messageToSend.startsWith("!")){
                     	showBubblePromise = this.showBubbleAfterSeconds(500)
