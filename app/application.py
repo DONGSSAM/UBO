@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify, send_file
 from datetime import datetime
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import sys, bcrypt, qrcode
 from db import users, check_connection,  chat_rooms, fs
 from bson.objectid import ObjectId
@@ -268,6 +268,12 @@ def get_room_name(user_doc, role, session_username):
     
 # 실시간 채팅 관련 코드
 
+@socketio.on('join')
+def handle_join(data):
+    room_name = data.get('room_name')
+    join_room(room_name)
+    print(f"{session.get('username')} 님이 {room_name} 방에 입장했습니다.")
+
 @socketio.on('message')
 def handle_message(data):
     user = data.get('user', '익명')#username이 페이지렌더링할때 이름이랑 겹쳐서 user로 바꿈
@@ -291,7 +297,7 @@ def handle_message(data):
         {"admin_name": room_name},
         {"$push": {"messages": {"$each": [new_message], "$slice": -200}}}
     )
-    emit('message', {'user': user, 'message': message, 'time': time, 'fileUrl':imageUrl}, broadcast=True)
+    emit('message', {'user': user, 'message': message, 'time': time, 'fileUrl':imageUrl}, to=room_name)
 
 @socketio.on('file')
 def handle_file(data):
@@ -319,7 +325,7 @@ def handle_file(data):
         {"$push": {"messages": {"$each": [new_message], "$slice": -200}}}
     )
 
-    emit('file', {'user': user, 'fileUrl': fileUrl, 'fileName': fileName, 'isImage': isImage, 'time': time}, broadcast=True)
+    emit('file', {'user': user, 'fileUrl': fileUrl, 'fileName': fileName, 'isImage': isImage, 'time': time}, to=room_name)
 
 @app.route("/fileUpload", methods=["POST"])
 def upload_image():
