@@ -1036,6 +1036,10 @@
                         alert("500MB 이하 파일만 업로드 가능합니다.");
                         return;
                     }
+                    var fileInput = document.getElementById('file-upload'); 
+                    var dataTransfer = new DataTransfer(); 
+                    dataTransfer.items.add(file); 
+                    fileInput.files = dataTransfer.files;
                     if (file.type.startsWith('image/')) {
                         this.previewImage(file);
                         return;//이미지 파일이면 미리보기 함수 실행 인풋 초기화 아직 안함
