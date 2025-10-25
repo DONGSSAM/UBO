@@ -102,6 +102,21 @@
             margin-bottom: 10px;
             border-radius: 5px;
         }
+        .btn-reset {
+            background-color: #faffdd; /* 기본 버튼 배경색 */
+            color: #000;               /* 글자색 */
+            border: none;              /* 테두리 제거 */
+            border-radius: 5px;        /* 모서리 둥글게 */
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-reset:hover,
+        .btn-reset:focus,
+        .btn-reset:active {
+            background-color: #ccd1b3; /* 마우스 올렸을 때 살짝 어둡게 */
+            outline: none;
+        }
         #message-to-send {
             width: 100%;
             padding: 10px 20px; /* 오른쪽 버튼 공간 확보 */
@@ -205,6 +220,14 @@
 
         .chat-scroll-wrapper::-webkit-scrollbar-track {
         background-color: transparent;
+        }
+        .previewImage {
+        display: flex;          /* 가로 정렬 */
+        align-items: flex-end;    /* 세로 중앙 정렬 */
+        gap: 10px;           
+        background-color: #faffdd;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
         }
         .chat .chat-message {
             padding: 5px 15px 0px 15px;
@@ -441,11 +464,14 @@
             font-size: 14px;
         }
         .chat-btn {
+            margin-bottom: 10px; /* 아래 여백 */
+            display: inline-block;
             background-color: #f0f0f0; /* 기본 버튼 배경색 */
             color: #000;               /* 글자색 */
             border: none;              /* 테두리 제거 */
             border-radius: 5px;        /* 모서리 둥글게 */
             padding: 5px 10px;
+            margin-bottom: 10px;
             cursor: pointer;
             transition: background 0.2s;
         }
@@ -490,12 +516,17 @@
             </div>
             </div> <!-- end chat-history -->
 
-            <div class="chat-message">
+            <div class="previewImage">
                 <span class=info></span>
+                <button id="reset-upload" class="btn-reset" style="display:none">
+                    <i class="previewReset"></i> ❎
+                </button>
+            </div>                         
+            <div class="chat-message">                         
                 <div class="chat-controls">
                     <!-- 일반 파일 첨부 버튼 -->
-                    <label for="file-upload" class="chat-btn">📎</label>
-                    <input type="file" id="file-upload" style="display:none">            
+                    <label for="file-upload" class="chat-btn">🖼️/🗂️</label>
+                    <input type="file" id="file-upload" style="display:none">        
                     <div class="chat-input-wrapper">
                         <textarea name="message-to-send" id="message-to-send" placeholder="메시지를 입력하세요." rows="1"></textarea> 
                         <button id="send" class="chat-btn">➡️</button>
@@ -738,7 +769,15 @@
                         const f = e.target.files && e.target.files[0];
                         if (f) this.uploadFile(f);
                     });
+                    document.getElementById('reset-upload').addEventListener('click', () => {
+                        const infoSpan = document.querySelector('.info');
+                        if (infoSpan) infoSpan.innerHTML = '';
+                        document.getElementById('file-upload').value = '';
+                        document.getElementById('reset-upload').style.display = 'none';
+                        // 미리보기 이미지가 있다면 제거
+                    });
                 },
+            
                 //소켓서버에서 메세지 받았을 때 실행
                 initSocket: function () {
                     
@@ -876,6 +915,10 @@
                         const infoSpan = document.querySelector('.info');
                         infoSpan.innerHTML = '';
                         infoSpan.appendChild(imgPreview);
+                        const resetBtn = document.querySelector('#reset-upload');
+                        if (resetBtn) {
+                            resetBtn.style.display = 'inline-block'; // 또는 'block'
+                        }
                     };
                     reader.readAsDataURL(file);
                 },
