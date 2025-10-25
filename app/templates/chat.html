@@ -126,13 +126,24 @@
             display: none;
         }
 
-        .chat .chat-history .message-data {
-            margin-bottom: 15px;
+        .chat .chat-history .my-message-data {
+            text-align: right;
             font-size: 14px;
+            margin-right: 10px;
         }
-
+        .message-row {
+            display: flex;
+            justify-content: flex-end; /* 오른쪽 정렬 */
+            align-items: flex-end;
+            gap: 5px; /* 시간과 말풍선 사이 간격 */
+            margin-top: 3px;
+        }
         .chat .chat-history .message-data-time {
-            font-size: 14px;
+            display: inline-block; /* 한 줄에 표시되도록 */
+            white-space: nowrap;   /* 줄바꿈 금지 */
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 2px;
         }
 
         .chat .chat-history .message {
@@ -140,25 +151,14 @@
             padding: 18px 20px;
             line-height: 22px;
             border-radius: 15px;
-            margin-bottom: 15px;
+            margin-bottom: 0px;
             width: 100%;
             position: relative;/*after의 절대적 기준점이 돼서 after 적용할 수 있게 함*/
         }
 
-        .chat .chat-history .message:after {/*my-message는 여기서 설정한 기본 설정을 따름*/
-            bottom: 100%;
-            border: solid transparent;
-            content: " ";
-            height: 0;
-            width: 0;
-            position: absolute;
-            pointer-events: none;
-            border-bottom-color: #F1F1F1  ;/*아래로 향한 삼각형을 만들도록 border설정함*/
-            border-width: 10px;
-            right: 17%;
-        }
 
         .chat .chat-history .my-message {/*메세지를 입력했을 때 my-message가 나옴*/
+            display: inline-block; 
             background: #F1F1F1;
             padding: 5px 10px;
             font-size: 15px;    
@@ -177,6 +177,12 @@
         .chat .chat-history .other-message:after {
             border-bottom-color: #8A8A8A;
             left: 17%;
+        }
+
+        .message .other-message img {
+            max-width: 250px;
+            display: block;
+            margin-top: 5px;
         }
 
         .chat-scroll-wrapper {
@@ -589,21 +595,23 @@
     <script id="message-template" type="text/x-handlebars-template"> 
         {% raw %}
         <li class="clearfix">
-            <div class="message-data align-right">                
-                <span class="message-data-name" >{{username}}</span>
-                <span class="message-data-time" >{{time}}</span> &nbsp; &nbsp;                
+            <div class="my-message-data">                
+                <span class="message-data-name" >{{username}}</span>            
             </div>
-            <div class="message my-message float-right">
-                {{messageOutput}}
-                <span class="message-data-time" >{{time}}</span> &nbsp; &nbsp;   
-                <!-- if fileUUrl로 한번 막고 isImage로 분류하기-->
-                {{#if fileUrl}}
-                    {{#if isImage}}
-                        <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
-                    {{else}}
-                        <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
+            <div class="message-row align-right">
+                <span class="message-data-time" >{{time}}</span>
+                <div class="message my-message float-right">
+                    {{messageOutput}}
+    
+                    <!-- if fileUUrl로 한번 막고 isImage로 분류하기-->
+                    {{#if fileUrl}}
+                        {{#if isImage}}
+                            <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
+                        {{else}}
+                            <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
+                        {{/if}}
                     {{/if}}
-                {{/if}}
+                </div>
             </div>
       </li>
       {% endraw %}
@@ -612,6 +620,7 @@
     <script id="message-response-template" type="text/x-handlebars-template">
         {% raw %}
         <li class="clearfix">
+
             <div class="message-data">
                 {{#if isBot}}
                     <img src="/static/images/trainer.png?v=1" class="face-image">
@@ -619,21 +628,23 @@
                     <div class="face-initial" style="background-color: {{initialBg}};">{{initial}}</div>
                 {{/if}}
                 <span class="message-data-name">{{username}}</span>
-                <span class="message-data-time">{{time}}</span>
             </div>
-            <div class="message other-message float-left">
-                {{#if loading}}
-                    <div class="loading-dots"><span></span><span></span><span></span></div>
-                {{else}}
-                    {{{messageOutput}}}
-                    {{#if fileUrl}}
-                        {{#if isImage}}
-                            <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
-                        {{else}}
-                            <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
+            <div class="message-row align-left">
+                <div class="message other-message">
+                    {{#if loading}}
+                        <div class="loading-dots"><span></span><span></span><span></span></div>
+                    {{else}}
+                        {{{messageOutput}}}
+                        {{#if fileUrl}}
+                            {{#if isImage}}
+                                <img src="{{fileUrl}}" alt="Uploaded Image" style="max-width:250px; display:inline; margin:10px;">
+                            {{else}}
+                                <a href="{{fileUrl}}" download="{{fileName}}">{{fileName}} 다운로드</a>
+                            {{/if}}
                         {{/if}}
                     {{/if}}
-                {{/if}}
+                </div>
+                <span class="message-data-time">{{time}}</span>
             </div>
         </li>
         {% endraw %}
@@ -819,12 +830,21 @@
                 renderFile: function ({user, time, fileUrl, isUser, isImage, fileName}) {
                     const templateId = isUser ? "#message-template" : "#message-response-template";
                     const template = Handlebars.compile(document.querySelector(templateId).innerHTML);
+                    const name = (typeof user === 'object' && user !== null)
+                        ? (user.name || user.username || '?')
+                        : (user || '?');                    
+                    const initial = name.charAt(0).toUpperCase() || '?';
+                    const isBot = (user === "칭찬맨"); // 봇 이름을 여기서 명시. 필요하면 조건 확장
+                    const initialBg = this.stringToColor(user || initial);
                     const context = {
                         username: user,
                         fileUrl: fileUrl,
                         isImage: isImage,
                         fileName: fileName,
                         time: time,
+                        initial: initial,
+                        initialBg: initialBg,
+                        isBot: isBot
                     };
                     let htmlString = template(context);
                     this.chatHistoryList.insertAdjacentHTML('beforeend', htmlString);
