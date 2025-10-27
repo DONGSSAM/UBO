@@ -168,6 +168,13 @@ def get_users():
 
     return jsonify(chat_room["users"])
 
+@app.route("/profile")
+def profile():
+    if not session.get("username"):
+        return redirect("/login")
+    username = session["username"]
+    user_data = users.find_one({"username": username})
+    return render_template("user_profile.html", user=user_data)
 #채팅방 관련 코드
 
 @app.route("/chat")

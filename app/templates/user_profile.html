@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>유저 프로필</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding:20px; }
+        .chat-card { border:1px solid #ddd; padding:12px; margin-bottom:12px; border-radius:6px; }
+        .chat-card h3 { margin:0 0 8px 0; }
+        .small-list { margin:6px 0 0 0; padding-left:18px; }
+        .meta { color:#666; font-size:13px; }
+    </style>
+</head>
+<body>
+    <h1>{{ user.username }}</h1>
+    <p class="meta">가입일: {{ user.created_at }}</p>
+
+    <!-- chats: list of chat objects passed from server -->
+    {% for chat in chats %}
+    <section class="chat-card">
+        <h3>{{ chat.name }} <small class="meta">(관리자: {{ chat.admin_name }})</small></h3>
+
+        <!-- 1. 본인 채팅 목록 (간단한 메시지 목록/링크) -->
+        <div>
+            <strong>1. 본인 채팅 목록</strong>
+            <ul class="small-list">
+                {% for msg in chat.my_messages %}
+                <li>{{ msg.time }} — {{ msg.preview }} <a href="{{ url_for('chat_app', room_name=chat.admin_name) }}">채팅으로</a></li>
+                {% else %}
+                <li>등록된 메시지가 없습니다.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- 2. 포인트 내역 (채팅별) -->
+        <div>
+            <strong>2. 포인트 내역 (이 채팅)</strong>
+            <ul class="small-list">
+                {% for p in chat.point_history %}
+                <li>{{ p.time }} · {{ p.amount }}점 · {{ p.note or '' }}</li>
+                {% else %}
+                <li>포인트 내역이 없습니다.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- 3. 도감 (채팅별) -->
+        <div>
+            <strong>3. 도감 (이 채팅)</strong>
+            <ul class="small-list">
+                {% for dex in chat.dex %}
+                <li>{{ dex.species }} {% if dex.nickname %} ({{ dex.nickname }}) {% endif %}</li>
+                {% else %}
+                <li>도감 항목이 없습니다.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+    {% endfor %}
+
+</body>
+</html>
