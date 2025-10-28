@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify, send_file
 from datetime import datetime
 from flask_socketio import SocketIO, emit, join_room, leave_room
-import sys, bcrypt, qrcode
+import sys, bcrypt, qrcode, random, os
 from db import users, check_connection,  chat_rooms, fs
 from bson.objectid import ObjectId
 
@@ -100,7 +100,8 @@ def register_user():
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
         "role": role,
-        "chat_rooms": [admin]
+        "chat_rooms": [admin],
+        "characters": []
     })
     chat_rooms.update_one(
         {"admin_name": admin},
@@ -393,6 +394,14 @@ def catch_pokemon():
     )
     return {"success": True, "new_point": current_point + amount}
 
+@app.route("/random_character")
+def random_character():
+    base_path = os.path.dirname(os.path.abspath(__file__))  # app 폴더 경로
+    path = os.path.join(base_path, "static", "characters")
+    files = [f for f in os.listdir(path) if f.endswith(".png")]
+    selected = random.choice(files)
+    return jsonify({"file": selected})
+
 @app.route("/give_point", methods=["POST"])
 def give_point():
     data = request.get_json()
@@ -451,6 +460,7 @@ def give_point():
     new_point = point - amount#새로운 점수 계산
 
     return jsonify(success=True, message=f"{to_user}님에게 {amount}포인트를 전달했어요!", new_point=new_point)
+
 
 # 규칙 관련 코드
 

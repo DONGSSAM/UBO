@@ -1046,20 +1046,15 @@
                     });
                 },
                 throwPokemon: async function () {
-    				const randomId = Math.floor(Math.random() * 1025) + 1;
-    				const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${randomId}.png`;
-                    const name = await this.getPokemonKoreanName(randomId)
-
+                    const res = await fetch('/random_character');
+                    const data = await res.json();
+                    const selectedImage = data.file;
+                    const name = selectedImage.split('.')[0];
+                    const imageUrl = `/static/characters/${selectedImage}`;
                     const message = `${name} 잡았다!!`;
                     this.emitMessage("칭찬맨", message, imageUrl);
-                    
                 },
-                getPokemonKoreanName: async function(id) {
-                    const res = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
-            		const data = await res.json();
-            		const koreanEntry = data.names.find(entry => entry.language.name === "ko");
-            		return koreanEntry ? koreanEntry.name : "(이름 없음)";
-                },
+                
                 catchPokemon: async function(username, amount) {
                     const admin = "{{ room_name }}"; // 템플릿 변수로 현재 채팅방 관리자 이름 전달
                     const res = await fetch("/catchpokemon", {
