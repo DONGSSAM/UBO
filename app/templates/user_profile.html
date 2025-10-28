@@ -15,48 +15,30 @@
     <h1>{{ user.username }}</h1>
     <p class="meta">가입일: {{ user.created_at }}</p>
 
-    <!-- chats: list of chat objects passed from server -->
-    {% for chat in chats %}
-    <section class="chat-card">
-        <h3>{{ chat.name }} <small class="meta">(관리자: {{ chat.admin_name }})</small></h3>
+    <h2>내 도감</h2>
+    <div class="character-list">
+        {% for c in characters %}
+            <img src="{{ url_for('static', filename='characters/' + c) }}" alt="{{ c }}">
+        {% else %}
+            <p>아직 획득한 캐릭터가 없습니다.</p>
+        {% endfor %}
+    </div>
 
-        <!-- 1. 본인 채팅 목록 (간단한 메시지 목록/링크) -->
-        <div>
-            <strong>1. 본인 채팅 목록</strong>
-            <ul class="small-list">
-                {% for msg in chat.my_messages %}
-                <li>{{ msg.time }} — {{ msg.preview }} <a href="{{ url_for('chat_app', room_name=chat.admin_name) }}">채팅으로</a></li>
-                {% else %}
-                <li>등록된 메시지가 없습니다.</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <!-- 2. 포인트 내역 (채팅별) -->
-        <div>
-            <strong>2. 포인트 내역 (이 채팅)</strong>
-            <ul class="small-list">
-                {% for p in chat.point_history %}
-                <li>{{ p.time }} · {{ p.amount }}점 · {{ p.note or '' }}</li>
-                {% else %}
-                <li>포인트 내역이 없습니다.</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <!-- 3. 도감 (채팅별) -->
-        <div>
-            <strong>3. 도감 (이 채팅)</strong>
-            <ul class="small-list">
-                {% for dex in chat.dex %}
-                <li>{{ dex.species }} {% if dex.nickname %} ({{ dex.nickname }}) {% endif %}</li>
-                {% else %}
-                <li>도감 항목이 없습니다.</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </section>
+    <h2>받은 칭찬 내역</h2>
+    {% for room in chat_rooms %}
+        <h3>채팅방: {{ room.room_name }}</h3>
+        {% if room.praises %}
+            {% for p in room.praises %}
+                <div class="praise">
+                    <b>내용:</b> {{ p.content }}<br>
+                    <b>점수:</b> {{ p.point }}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>아직 받은 칭찬이 없습니다.</p>
+        {% endif %}
+    {% else %}
+        <p>참여 중인 채팅방이 없습니다.</p>
     {% endfor %}
-
 </body>
 </html>

@@ -100,7 +100,12 @@ def register_user():
         "password": hashed_pw,
         "created_at": datetime.utcnow(),
         "role": role,
-        "chat_rooms": [admin],
+        "chat_rooms": [
+            {
+                "room_name": admin,  # 기존 admin 이름
+                "praises": []        # 칭찬 리스트 초기화
+            }
+        ],
         "characters": []
     })
     chat_rooms.update_one(
@@ -172,10 +177,29 @@ def get_users():
 @app.route("/profile")
 def profile():
     if not session.get("username"):
-        return redirect("/login")
+        return redirect("/")
+
     username = session["username"]
     user_data = users.find_one({"username": username})
-    return render_template("user_profile.html", user=user_data)
+
+    if not user_data:
+        return "유저 정보를 찾을 수 없습니다.", 404
+
+    # 도감 목록
+    characters = user_data.get("characters", [])
+
+    # 채팅방 및 칭찬 내역
+    chat_rooms = user_data.get("chat_rooms", [])
+
+    # HTML 템플릿에 전달
+    return render_template(
+        "user_profile.html",
+        user=user_data,
+        username=username,
+        characters=characters,
+        chat_rooms=chat_rooms
+    )
+
 #채팅방 관련 코드
 
 @app.route("/chat")
@@ -270,9 +294,10 @@ def get_room_name(user_doc, role, session_username):
         chat_rooms_list = user_doc.get("chat_rooms", [])
         if not chat_rooms_list:
             return None
-        return chat_rooms_list[0]#채팅방 리스트 중에 첫번째로 이동함 나중에 채팅방 여러개면 선택하는 페이지 만들기
-    else:
-        return "권한 없음", 403
+
+        # 첫 번째 채팅방 정보, 이름 가져오기
+        first_room = chat_rooms_list[0]
+        return first_room.get("room_name")
     
 # 실시간 채팅 관련 코드
 
@@ -400,6 +425,10 @@ def random_character():
     path = os.path.join(base_path, "static", "characters")
     files = [f for f in os.listdir(path) if f.endswith(".png")]
     selected = random.choice(files)
+    users.update_one(
+        {"username": session.get("username")},
+        {"$addToSet": {"characters": selected}}
+    )
     return jsonify({"file": selected})
 
 @app.route("/give_point", methods=["POST"])
@@ -485,6 +514,7 @@ def give_score():
 
     rule = rule_list["rules"][0] # 규칙 하나 가져와서 규칙 설정함
     score = rule.get("score", 0)
+    content = rule.get("content", "")
 
     # 유저에게 점수 부여
     result = chat_rooms.update_one(
@@ -496,7 +526,19 @@ def give_score():
             "$inc": {"users.$.point": score}
         }
     )
-
+    # 칭찬 내용 praises 배열에 추가
+    users.update_one(
+        {"username": user},
+        {
+            "$push": {
+                "chat_rooms.$[room].praises": {
+                    "content": content,
+                    "point": score
+                }
+            }
+        },
+        array_filters=[{"room.room_name": admin_name}]
+    )
 
     if result.modified_count == 1:
         return jsonify(success=True, score=score)
@@ -537,7 +579,7 @@ def get_rules():
         user = users.find_one({"username": session.get("username")})
         if not user or not user.get("chat_rooms"):
             return jsonify([])
-        admin_name = user["chat_rooms"][0]  # 첫 번째 채팅방의 관리자 이름 사용
+        admin_name = user["chat_rooms"][0]["room_name"] # 첫 번째 채팅방의 관리자 이름 사용
     chat_room = chat_rooms.find_one({"admin_name": admin_name}, {"rules": 1})
     if not chat_room:
         return jsonify([])
