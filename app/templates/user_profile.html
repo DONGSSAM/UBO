@@ -1,44 +1,196 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="utf-8">
-    <title>유저 프로필</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding:20px; }
-        .chat-card { border:1px solid #ddd; padding:12px; margin-bottom:12px; border-radius:6px; }
-        .chat-card h3 { margin:0 0 8px 0; }
-        .small-list { margin:6px 0 0 0; padding-left:18px; }
-        .meta { color:#666; font-size:13px; }
-    </style>
+<head>  
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preload stylesheet" as="style" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@200&family=Nanum+Gothic&family=Nanum+Myeongjo&family=Noto+Sans+KR:wght@400&family=Roboto:wght@100&display=swap">    
+  <title>우보 프로필</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css?family=Lato:400,700');
+    @import url('https://fonts.googleapis.com/css?family=Do+Hyeon:400');
+
+    @font-face {
+      font-family: 'NanumGothic';
+      font-style: normal;
+      src: url("/fonts/Nanum_Gothic/NanumGothic-Regular.ttf");
+    }
+
+    *,
+    *:before, 
+    *:after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .profile-box {
+      width: 100%;
+      max-width: 430px;
+      background-color: #fff;
+      border-radius: 15px;
+      border: 2px solid #eee;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25),
+                  0 10px 10px rgba(0, 0, 0, 0.22);
+      padding: 25px;
+      text-align: center;
+      max-height: 90vh;
+      overflow-y: auto;  /* 컨텐츠가 넘칠 경우 스크롤 추가 */
+      margin: 20px;      /* 모바일에서 여백 추가 */
+    }
+
+    h1 {
+      font-family: 'Do Hyeon', sans-serif;
+      font-size: 1.8em;
+      margin-bottom: 5px;
+      color: #333;
+    }
+
+    .meta {
+      color: #777;
+      font-size: 0.9em;
+      margin: 0px;
+    }
+
+    h2 {
+      margin-top: 15px;
+      margin-bottom: 0px;
+      font-size: 1.3em;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 5px;
+      color: #444;
+    }
+
+    .room-title {
+    position: sticky;    /* 스크롤 시 고정 */
+    top: 0;              /* room-block 내부 상단 기준 */
+    background-color: #fff; /* 배경색 필수, 투명이면 내용 겹침 */
+    padding: 5px 0;
+    font-size: 1.1em;
+    color: #555;
+    z-index: 1;          /* 다른 요소 위로 */
+    margin-bottom: 5px;
+    margin-top: 0px;
+    display: flex;
+    justify-content: flex-start; /* 왼쪽 정렬 */
+    align-items: center;
+    gap: 10px;
+    }
+
+    .join-btn {
+    font-size: 0.9em;
+    padding: 3px 8px;
+    background-color: #dfdfdf;
+    color: #3f5cff;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background 0.2s;
+    }
+
+    .join-btn:hover {
+    background-color: #acacac;
+    }
+    .character-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+      max-height: 200px;
+      overflow: auto;
+    }
+
+    .character-list img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      transition: transform 0.2s;
+    }
+
+    .character-list img:hover {
+      transform: scale(1.1);
+    }
+
+    .praise {
+      background-color: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: left;
+      margin-top: 10px;
+    }
+
+    .praise b {
+      color: #333;
+    }
+
+    .room-block {
+      margin-top: 15px;
+      text-align: left;
+      max-height: 200px;    /* 칭찬 영역만 제한 */
+      overflow-y: auto;
+    }
+
+    .room-block h3 {
+      font-size: 1.1em;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    p {
+      color: #666;
+    }
+
+  </style>
 </head>
+
 <body>
+  <div class="profile-box">
     <h1>{{ user.username }}</h1>
-    <p class="meta">가입일: {{ user.created_at }}</p>
+    <p class="meta">가입일: {{ user.created_at.strftime('%Y-%m-%d') }}</p>
 
     <h2>내 도감</h2>
     <div class="character-list">
-        {% for c in characters %}
-            <img src="{{ url_for('static', filename='characters/' + c) }}" alt="{{ c }}">
-        {% else %}
-            <p>아직 획득한 캐릭터가 없습니다.</p>
-        {% endfor %}
+      {% for c in characters %}
+        <img src="{{ url_for('static', filename='characters/' + c) }}" alt="{{ c }}">
+      {% else %}
+        <p>아직 획득한 캐릭터가 없습니다.</p>
+      {% endfor %}
     </div>
 
     <h2>받은 칭찬 내역</h2>
     {% for room in chat_rooms %}
-        <h3>채팅방: {{ room.room_name }}</h3>
+      <div class="room-block">
+        <h3 class="room-title">
+            채팅방: {{ room.room_name }}
+            <a href="{{ url_for('chat_app', room_name=room.room_name) }}" class="join-btn">접속</a>
+        </h3>
         {% if room.praises %}
-            {% for p in room.praises %}
-                <div class="praise">
-                    <b>내용:</b> {{ p.content }}<br>
-                    <b>점수:</b> {{ p.point }}
-                </div>
-            {% endfor %}
+          {% for p in room.praises %}
+            <div class="praise">
+              <b>내용:</b> {{ p.content }}<br>
+              <b>점수:</b> {{ p.point }}
+            </div>
+          {% endfor %}
         {% else %}
-            <p>아직 받은 칭찬이 없습니다.</p>
+          <p>아직 받은 칭찬이 없습니다.</p>
         {% endif %}
+      </div>
     {% else %}
-        <p>참여 중인 채팅방이 없습니다.</p>
+      <p>참여 중인 채팅방이 없습니다.</p>
     {% endfor %}
+  </div>
 </body>
 </html>

@@ -74,7 +74,6 @@
         }
         
         .chat .chat-header .chat-about {
-            margin-left: 20px;
             margin-right: 20px;
             font-size: 35px;            
             font-family: 'Do Hyeon';
@@ -475,11 +474,17 @@
             cursor: pointer;
             transition: background 0.2s;
         }
+        #myprofile {
+            font-weight: bold;
+            background-color: #6cb0f8;
+            color:white;
+        }
 
         /* 마우스를 올렸을 때 */
         .chat-btn:hover,
         .chat-btn:focus,
-        .chat-btn:active {
+        .chat-btn:active,
+        #myprofile:hover{
             background-color: #e0e0e0; /* 마우스 올렸을 때 살짝 어둡게 */
             outline: none;
         }
@@ -504,6 +509,7 @@
                 <div class="user-info">
                     <p>👤: <span class="user" id="username">{{ username }}</span></p>
                 	<p>🪀: <span class="user" id="point">{{ point }}</span></p>
+                    <button class="chat-btn" id="myprofile" onclick="window.location.href='/profile'">내정보</button>
                 </div>
 
             </div> <!-- end chat-header -->
@@ -526,7 +532,7 @@
                 <div class="chat-controls">
                     <!-- 일반 파일 첨부 버튼 -->
                     <label for="file-upload" class="chat-btn">🖼️/🗂️</label>
-                    <input type="file" id="file-upload" style="display:none">        
+                    <input type="file" id="file-upload" style="display:none">  
                     <div class="chat-input-wrapper">
                         <textarea name="message-to-send" id="message-to-send" placeholder="메시지를 입력하세요." rows="1"></textarea> 
                         <button id="send" class="chat-btn">➡️</button>
