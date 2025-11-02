@@ -494,7 +494,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
 </head>
 
-<body onload="loadRules()">
+<body onload="loadRules(); loadMissions();">
     <div class="container clearfix"><!-- 컨테이너 박스에 디자인할 요소들 설정해서 배치함 -->
         <div class="chat">
             <div class="chat-header clearfix">
@@ -590,7 +590,7 @@
             <h2 class="modal-header">규칙 수정</h2>
             <input
             type="text"
-            id="editMissionInput" 
+            id="editRuleInput" 
         
             onkeydown="moveToEditScoreEnter(event)"
             style="width:100%; margin-bottom:10px;"
@@ -598,7 +598,7 @@
             
             <input
             type="number"
-            id="editRewardInput"
+            id="editScoreInput"
             
             min="0"
             onkeydown="confirmEditEnter(event)"
@@ -626,7 +626,7 @@
       			<h2>일일 과제</h2>
       			<button id="toggleMissionSettingsBtn" onclick="toggleEditMode()">설정</button>
     		</div>
-    	<ul id="MissionList">
+    	<ul id="missionList">
     	</ul>
     		<div class="modal-footer">
       			<button onclick="closeModal('modal5')">닫기</button>
@@ -634,7 +634,7 @@
     		</div>
   		</div>
 	</div>
-    <!-- submutMission 함수 서버랑 연동되게 만들고 toggleEditMode가 규칙리스트랑 연동됨 미션이랑 연동되게 바꾸기 modal7 완전히 수정 -->
+    <!-- submitMission 함수 서버랑 연동되게 만들고 toggleEditMode가 규칙리스트랑 연동됨 미션이랑 연동되게 바꾸기 modal7 완전히 수정 -->
     <div class="modal-overlay" id="modal6" onclick="handleOverlayClick(event, 'modal6')">
   		<div class="modal">
     	<h2 class="modal-header">과제 추가</h2>
@@ -1215,9 +1215,6 @@
 
         function openModal(id) {
     	    document.getElementById(id).style.display = "flex";
-            if (id === "modal5") {
-                loadApproveUserList();
-            }
   		}
 
   		function closeModal(id) {
@@ -1277,25 +1274,53 @@
           const newItem = document.createElement("li");
 
           const textSpan = document.createElement("span");
-          textSpan.className = "rule-text";
-          textSpan.textContent = `${newRule} (${newScore}점)`;
+          textSpan.className = "mission-text";
+          textSpan.textContent = `${newMission} (${newReward}점)`;
           newItem.appendChild(textSpan);   //li에 text적힌 span 추가
 
-          ruleList.appendChild(newItem);
-          ruleInput.value = "";
-          scoreInput.value = "";
-          closeModal("modal2");
+          // ✅ 체크박스 추가dx
+          const checkbox = document.createElement("input");
+        
+          checkbox.type = "checkbox";        
+          checkbox.className = "mission-check";        
 
-          fetch("/add_rule", {//서버에 전달
+          newItem.appendChild(checkbox);
+
+          missionList.appendChild(newItem);
+          missionInput.value = "";
+          rewardInput.value = "";
+          closeModal("modal6");
+
+          fetch("/add_mission", {//서버에 전달
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: newRule, score: Number(newScore) })
+            body: JSON.stringify({ content: newMission, reward: Number(newReward) })
           })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-                newItem.setAttribute("data-id", data.id); // ← ★ id를 li에 저장
-                loadRules();
+                const missionId = data.id;
+                newItem.setAttribute("data-id", missionId); // ← ★ id를 li에 저장
+                checkbox.dataset.missionId = missionId; // 서버에서 식별용        
+                checkbox.addEventListener("change", async function () {        
+                    const isChecked = checkbox.checked; 
+
+                    // 서버에 체크 상태 전송
+                    if ("{{username}}" !== "{{room_name}}") {// 유저만 서버 전송 가능          
+                    const response = await fetch("/update_checked", {
+
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                mission_id: missionId,
+                                username: "{{ username }}",
+                                checked: isChecked,
+                                admin: "{{ room_name }}"
+                        }),
+                    });
+                    }
+                });
+                loadMissions();
             }
           });
         }
@@ -1461,40 +1486,6 @@
                 });
         }
 
-        function loadApproveUserList() { // 로그인한 사람이 admin일때 모달이 뜨게해서 모달이 뜬사람의 로그인정보 활용한거임
-            const adminUsername = "{{ username }}";
-            const approveUserListDiv = document.getElementById('approveUserList');
-            approveUserListDiv.innerHTML = ''; // 기존 버튼 제거
-
-            fetch(`/get_approve_users?admin=${encodeURIComponent(adminUsername)}`)
-                .then(res => res.json())
-                .then(users => {
-                    if (users.length === 0) {
-                        approveUserListDiv.innerHTML = '<p>승인 요청이 없습니다.</p>';
-                        return;
-                    }
-                    users.forEach(user => {
-                        const btn = document.createElement("button");
-                        btn.textContent = user.username;
-                        btn.onclick = async () => {
-                            const admin = "{{ username }}"; // 현재 로그인한 관리자 이름(채팅방 이름)
-                            const res = await fetch("/approve_user", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ username: user.username, admin }) // username과 admin 전달
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                                alert(`${user.username} 승인 완료`);
-                                loadApproveUserList(); // 목록 새로고침
-                            } else {
-                                alert("승인 실패");
-                            }
-                        };
-                        approveUserListDiv.appendChild(btn);
-                    });
-                });
-        }
 
         function confirmEditEnter(event) {
           if (event.key === "Enter") {
@@ -1582,6 +1573,58 @@
       		});
     		});
 		}
+        function loadMissions() { // username: 로그인 유저 이름
+            fetch("/get_missions")
+            .then(res => res.json())
+            .then(missionList => {
+                const missionUl = document.getElementById("missionList");
+                missionUl.innerHTML = ""; // 기존 미션 초기화
+
+                missionList.forEach(mission => {
+                    const li = document.createElement("li");
+                    li.dataset.id = mission._id;
+
+                    // 미션 텍스트
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'mission-text';
+                    textSpan.textContent = `${mission.content} (${mission.reward}점)`;
+                    li.appendChild(textSpan);
+
+                    // 체크박스 추가
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.className = "mission-check";
+                    checkbox.dataset.missionId = mission._id;
+
+                    // DB의 checked 배열에 username이 있으면 체크
+                    if (mission.checked && mission.checked.includes("{{ username }}")) {
+                        checkbox.checked = true;
+                    }
+                    checkbox.addEventListener("change", async function () {
+                        const isChecked = checkbox.checked;
+
+                        // 서버에 체크 상태 전송
+                        if ("{{username}}" !== "{{room_name}}") {// 유저만 서버 전송 가능          
+                        const response = await fetch("/update_checked", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                mission_id: mission._id,
+                                username: "{{ username }}",
+                                checked: isChecked,
+                                admin: "{{ room_name }}"
+                            }),
+                        });
+                        }
+                    });
+
+                    li.appendChild(checkbox);
+                    missionUl.appendChild(li);
+                });
+            });
+        }
+
+
         
         document.addEventListener('DOMContentLoaded', function () {//웹페이지에 HTML이 완성되고 DOM 트리거가 완성된 이벤트
             var dropArea = document.querySelector('body');

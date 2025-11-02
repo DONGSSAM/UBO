@@ -665,6 +665,130 @@ def delete_rule():
     else:
         return jsonify({'success': False, 'message': '삭제 실패'})
 
+# 미션 관련 코드
+@app.route("/add_mission", methods=["POST"])
+def add_mission():
+    data = request.get_json()
+    content = data.get("content", "").strip()
+    try:
+        reward = int(data.get("reward", 0))
+    except (TypeError, ValueError):
+        reward = 0
+    admin_name = session.get("username")#일단 관리자마다 하나씩만 채팅방 만듦
 
+    if content:
+        mission_doc = {#규칙별로 id부여해서 클릭했을때 고유한 규칙으로서 판단함
+            "_id": ObjectId(),# 배열 내부 규칙에도 고유 ID 부여
+            "content": content,
+            "reward": reward,
+            "created_at": datetime.utcnow(),
+            "checked":[]
+        }
+        mission_id = mission_doc["_id"]
+
+        chat_rooms.update_one(
+            {"admin_name": admin_name},
+            {"$push": {"missions": mission_doc}}
+        )
+        return jsonify(success=True, id=str(mission_id), mission={**mission_doc, "_id": str(mission_id)})
+    return jsonify(success=False, message="빈 규칙입니다.")
+
+@app.route("/get_missions")
+def get_missions():
+    if session.get("role") == "admin":
+        admin_name = session.get("username")
+    else:
+        user = users.find_one({"username": session.get("username")})
+        if not user or not user.get("chat_rooms"):
+            return jsonify([])
+        admin_name = user["chat_rooms"][0]["room_name"] # 첫 번째 채팅방의 관리자 이름 사용
+    chat_room = chat_rooms.find_one({"admin_name": admin_name}, {"missions": 1})
+    if not chat_room:
+        return jsonify([])
+    mission_list = []
+    for r in chat_room["missions"]:
+        r_copy = r.copy()  # 원본 데이터 보호
+        r_copy['_id'] = str(r_copy['_id'])  # ObjectId를 문자열로 변환
+        mission_list.append(r_copy)
+    return jsonify(mission_list)
+
+@app.route("/update_checked", methods=["POST"])
+def update_checked():
+    data = request.get_json()
+    mission_id = data.get("mission_id")
+    username = data.get("username")
+    admin = data.get("admin")
+    checked = data.get("checked", False)
+
+    if not mission_id or not username:
+        return jsonify(success=False, message="ID와 유저이름은 필수입니다.")
+
+    if checked:
+        # 체크 → 추가
+        result = chat_rooms.update_one(
+            {"admin_name": admin, "missions._id": ObjectId(mission_id)},
+            {"$addToSet": {"missions.$.checked": username}}
+        )
+    else:
+        # 체크 해제 → 제거
+        result = chat_rooms.update_one(
+            {"admin_name": admin, "missions._id": ObjectId(mission_id)},
+            {"$pull": {"missions.$.checked": username}}
+        )
+
+    if result.modified_count > 0:
+        return jsonify(success=True)
+    else:
+        return jsonify(success=False, message="수정 실패 또는 변경 사항 없음")
+
+'''
+@app.route("/update_rule", methods=["POST"])
+def update_rule():
+    data = request.get_json()
+    rule_id = data.get("id")
+    new_content = data.get("content", "").strip()
+    new_score = data.get("score")
+    admin_name = session.get("username")
+
+    if not rule_id or not new_content:
+        return jsonify(success=False, message="ID와 내용은 필수입니다.")
+
+    #업데이트 할 필드를 미리 정의한 딕셔너리
+    update_fields = {"rules.$.content": new_content}
+    # 점수가 None이 아니고 숫자라면 같이 업데이트
+    if new_score is not None:
+        try:
+            update_fields["rules.$.score"] = float(new_score)
+        except ValueError:
+            return jsonify(success=False, message="점수는 숫자여야 합니다.")
+
+    result = chat_rooms.update_one(
+        {"admin_name": admin_name, "rules._id": ObjectId(rule_id)},
+        {"$set": update_fields}
+    )
+
+    if result.modified_count > 0:
+        return jsonify(success=True)
+    else:
+        return jsonify(success=False, message="수정 실패 또는 변경 사항 없음")
+
+@app.route('/delete_rule', methods=['POST'])
+def delete_rule():
+    data = request.get_json()
+    rule_id = data.get('id')
+    admin_name = session.get("username")
+    if not rule_id:
+        return jsonify({'success': False, 'message': 'ID 없음'}), 400
+
+    result = chat_rooms.update_one(
+        {"admin_name": admin_name},
+        {"$pull": {"rules": {"_id": ObjectId(rule_id)}}}
+    )
+
+    if result.deleted_count == 1:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': '삭제 실패'})
+'''
 if __name__ == "__main__":
     socketio.run(app, host='0.0.0.0', port=5000)
