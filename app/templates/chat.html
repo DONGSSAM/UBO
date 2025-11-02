@@ -393,7 +393,7 @@
   		margin: 0;
 		}        
         
-        #toggleSettingsBtn {
+        #toggleSettingsBtn, #toggleMissionSettingsBtn {
   		padding: 5px 12px;
   		cursor: pointer;
 		}
@@ -474,7 +474,7 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        #myprofile {
+        #myprofile, #userManage {
             font-weight: bold;
             background-color: #6cb0f8;
             color:white;
@@ -500,16 +500,18 @@
             <div class="chat-header clearfix">
                 <div class="button-group" style="display: flex; flex-direction: column; gap: 5px;">
                     <button onclick="openModal('modal1')">학급 규칙</button>
-                    {% if role == "admin" %}
-                    <button onclick="openModal('modal5')">승인 요청</button>
-                    {% endif %}
+                    <button onclick="openModal('modal5')">과제 목록</button>
                 </div>
                 <img style="width:60px; border-radius:50px; margin-left:10px;" src="{{ url_for('static', filename='images/logo.png') }}?v=3" alt="moungbo" />
                 <div class="chat-about" style="white-space: pre;">우리반보약</div>
                 <div class="user-info">
                     <p>👤: <span class="user" id="username">{{ username }}</span></p>
                 	<p>🪀: <span class="user" id="point">{{ point }}</span></p>
+                    {% if role == "admin" %}
+                    <button class="chat-btn" id="userManage" onclick="window.location.href='/usermanage'">채팅방 관리</button>
+                    {% else %}
                     <button class="chat-btn" id="myprofile" onclick="window.location.href='/profile'">내정보</button>
+                    {% endif %}
                 </div>
 
             </div> <!-- end chat-header -->
@@ -588,7 +590,7 @@
             <h2 class="modal-header">규칙 수정</h2>
             <input
             type="text"
-            id="editRuleInput" 
+            id="editMissionInput" 
         
             onkeydown="moveToEditScoreEnter(event)"
             style="width:100%; margin-bottom:10px;"
@@ -596,7 +598,7 @@
             
             <input
             type="number"
-            id="editScoreInput"
+            id="editRewardInput"
             
             min="0"
             onkeydown="confirmEditEnter(event)"
@@ -617,14 +619,74 @@
             <button class="close-btn" onclick="closeModal('modal4')">닫기</button>
         </div>
     </div>
+
     <div class="modal-overlay" id="modal5" onclick="handleOverlayClick(event, 'modal5')">
+  		<div class="modal" >
+    		<div class="modal-header">
+      			<h2>일일 과제</h2>
+      			<button id="toggleMissionSettingsBtn" onclick="toggleEditMode()">설정</button>
+    		</div>
+    	<ul id="MissionList">
+    	</ul>
+    		<div class="modal-footer">
+      			<button onclick="closeModal('modal5')">닫기</button>
+      			<button id="addMission" onclick="openModal('modal6')">과제 추가</button>
+    		</div>
+  		</div>
+	</div>
+    <!-- submutMission 함수 서버랑 연동되게 만들고 toggleEditMode가 규칙리스트랑 연동됨 미션이랑 연동되게 바꾸기 modal7 완전히 수정 -->
+    <div class="modal-overlay" id="modal6" onclick="handleOverlayClick(event, 'modal6')">
+  		<div class="modal">
+    	<h2 class="modal-header">과제 추가</h2>
+    	<input
+      	type="text"
+      	id="newMissionInput"
+      	placeholder="새로운 과제 입력"
+      	onkeydown="moveToScoreEnter(event)"
+      	style="width:100%; margin-bottom:10px;"
+    	>
+
+        <input
+        type="number"
+        id="newRewardInput"
+        placeholder="점수 입력"
+        min="0"
+        onkeydown="submitMissionEnter(event)"
+        style="width:100%; margin-bottom:10px;"
+        >
+
+        <div class="modal-footer">
+        	<button class="close-btn" onclick="handleMissionAddButtonClick()">추가</button>
+    		<button class="close-btn" onclick="closeModal('modal6')">닫기</button>
+        </div>
+  		</div>
+	</div>
+<!--
+    <div class="modal-overlay" id="modal7" onclick="handleOverlayClick(event, 'modal7')">
         <div class="modal">
-            <h3 class="modal-header">승인 요청 목록</h3>
-            <div id="approveUserList"></div>
+            <h2 class="modal-header">과제 수정</h2>
+            <input
+            type="text"
+            id="editRuleInput" 
+        
+            onkeydown="moveToEditScoreEnter(event)"
+            style="width:100%; margin-bottom:10px;"
+            > 
+            
+            <input
+            type="number"
+            id="editScoreInput"
+            
+            min="0"
+            onkeydown="confirmEditEnter(event)"
+            style="width:100%; margin-bottom:10px;"
+            >
             <div class="modal-footer">
-                <button class="close-btn" onclick="closeModal('modal5')">닫기</button>
+            <button class="close-btn" onclick="confirmEdit()">수정</button> 
+            <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
             </div>
         </div>
+-->
     </div>
 
     <audio id="audioPlayer" controls style="display:none"></audio>
@@ -1170,7 +1232,9 @@
         const role = "{{ role }}";
         if (role !== "admin") {
             document.getElementById("addRule").style.display = "none";
+            document.getElementById("addMission").style.display = "none";
             document.getElementById("toggleSettingsBtn").style.display = "none";
+            document.getElementById("toggleMissionSettingsBtn").style.display = "none";
         }
         function submitRule(ruleInput, scoreInput) {//서버에 규칙 제출
           const newRule = ruleInput.value.trim();
@@ -1203,6 +1267,39 @@
             }
           });
         }
+
+        function submitMission(missionInput, rewardInput) {//서버에 미션 제출
+          const newMission = missionInput.value.trim();
+          const newReward = rewardInput.value.trim();
+          if (newMission === "" || newReward === "") return;
+
+          const missionList = document.getElementById("missionList");
+          const newItem = document.createElement("li");
+
+          const textSpan = document.createElement("span");
+          textSpan.className = "rule-text";
+          textSpan.textContent = `${newRule} (${newScore}점)`;
+          newItem.appendChild(textSpan);   //li에 text적힌 span 추가
+
+          ruleList.appendChild(newItem);
+          ruleInput.value = "";
+          scoreInput.value = "";
+          closeModal("modal2");
+
+          fetch("/add_rule", {//서버에 전달
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: newRule, score: Number(newScore) })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+                newItem.setAttribute("data-id", data.id); // ← ★ id를 li에 저장
+                loadRules();
+            }
+          });
+        }
+
         let currentEditItem = null;//li 저장용 변수        
         let editMode = false;
         
@@ -1407,23 +1504,48 @@
         }
         function moveToEditScoreEnter(event) {
           if (event.key === "Enter") {
-            event.preventDefault(); // 폼 제출 방지
-            document.getElementById("editScoreInput").focus(); // 점수 입력칸으로 이동
+            if (event.target.id === "editRuleInput") {
+                event.preventDefault(); // 폼 제출 방지
+                document.getElementById("editScoreInput").focus(); // 점수 입력칸으로 이동
+                return;
+            }
+            else if (event.target.id === "newMissionInput") {
+                event.preventDefault(); // 폼 제출 방지
+                document.getElementById("newRewardInput").focus(); // 점수 입력칸으로 이동
+                return;
+            }
           }
         }
         function submitRuleEnter(event) {//html과 연결할 함수
           if (event.key === "Enter") {
-            const input = event.target;
             submitRule(
                 document.getElementById("newRuleInput"),
                 document.getElementById("newScoreInput")
             );
           }
         }
+
+        function submitMissionEnter(event) {//html과 연결할 함수
+          if (event.key === "Enter") {
+            submitMission(
+                document.getElementById("newMissionInput"),
+                document.getElementById("newRewardInput")
+            );
+          }
+        }
+
         function moveToScoreEnter(event) {
           if (event.key === "Enter") {
-            event.preventDefault(); // 폼 제출 방지
-            document.getElementById("newScoreInput").focus(); // 점수 입력칸으로 이동
+            if (event.target.id === "newRuleInput") {
+                event.preventDefault(); // 폼 제출 방지
+                document.getElementById("newScoreInput").focus(); // 점수 입력칸으로 이동
+                return;
+            }
+            else if (event.target.id === "newMissionInput") {
+                event.preventDefault(); // 폼 제출 방지
+                document.getElementById("newRewardInput").focus(); // 점수 입력칸으로 이동
+                return;
+            }
           }
         }
 
@@ -1431,6 +1553,13 @@
             submitRule(
                 document.getElementById("newRuleInput"),
                 document.getElementById("newScoreInput")
+            );
+        }
+
+        function handleMissionAddButtonClick() {//html과 연결할 함수
+            submitMission(
+                document.getElementById("newMissionInput"),
+                document.getElementById("newRewardInput")
             );
         }
         

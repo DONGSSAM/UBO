@@ -78,7 +78,8 @@ def register_admin():
             "created_at": datetime.utcnow(),
             "point": 5000,
             "users": [],
-            "rules": []
+            "rules": [],
+            "missions": []
         })
 
     return jsonify(success=True, redirect=url_for("logIn"))
@@ -198,6 +199,32 @@ def profile():
         username=username,
         characters=characters,
         chat_rooms=chat_rooms
+    )
+
+# 유저 관리 페이지 chat_rooms에서 데이터 가져와서 관리하기
+@app.route("/usermanage")
+def user_manage():
+    if not session.get("username") or session.get("role") != "admin":
+        return redirect("/")
+
+    username = session["username"]
+    user_data = users.find_one({"username": username})
+
+    if not user_data:
+        return "유저 정보를 찾을 수 없습니다.", 404
+
+    # 채팅방 및 참가자 목록
+    chat_rooms_list = []
+    for room_name in user_data.get("chat_rooms", []):
+        chat_room = chat_rooms.find_one({"admin_name": room_name})
+        if chat_room:
+            chat_rooms_list.append(chat_room)
+
+    return render_template(
+        "user_manage.html",
+        user=user_data,
+        username=username,
+        chat_rooms=chat_rooms_list
     )
 
 #채팅방 관련 코드

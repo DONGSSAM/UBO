@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preload stylesheet" as="style" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@200&family=Nanum+Gothic&family=Nanum+Myeongjo&family=Noto+Sans+KR:wght@400&family=Roboto:wght@100&display=swap">    
-  <title>우보 프로필</title>
+  <title>우보 유저관리</title>
 
   <style>
     @import url('https://fonts.googleapis.com/css?family=Lato:400,700');
@@ -52,7 +52,6 @@
     h1 {
       font-family: 'Do Hyeon', sans-serif;
       font-size: 1.8em;
-      margin-top: 5px;
       margin-bottom: 5px;
       color: #333;
     }
@@ -96,7 +95,7 @@
     color: #3f5cff;
     text-decoration: none;
     border-radius: 5px;
-    transition: background 0.2s;
+    font-weight: bold;
     }
 
     .join-btn:hover {
@@ -157,6 +156,75 @@
       color: #666;
     }
 
+		.modal {
+  		font-family: 'NanumGothic';
+  		position: fixed;
+  		top: 45%;
+  		left: 50%;
+  		transform: translate(-50%, -50%);
+  		background-color: white;
+  		border: 1px solid #ccc;
+  		padding: 20px;
+  		box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  		z-index: 1000;
+  		border-radius: 5px;
+  		width: 400px; /* 적당한 너비 지정 */
+  		display: flex;
+  		flex-direction: column;
+		}
+
+		.modal-overlay {
+  		display: none;
+  		position: fixed;
+  		top: 0; left: 0;
+  		width: 100vw; height: 100vh;
+  		background: rgba(0, 0, 0, 0.5);
+  		justify-content: center;
+  		align-items: center;
+  		z-index: 1000;
+		}
+        
+		.modal-header {
+  		display: flex;
+  		justify-content: space-between;
+  		align-items: center;
+  		margin-bottom: 15px;
+		}
+
+		.modal-header h2 {
+  		margin: 0;
+		}        
+        
+        #toggleSettingsBtn {
+  		padding: 5px 12px;
+  		cursor: pointer;
+		}
+        
+    .modal-footer {
+      margin-top: 15px;
+      padding: 5px 10px;
+      background: white;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+		.modal-footer button {
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      width: fit-content;
+		}
+    
+    #approveUserList {
+      width: 100%;
+      text-align: left;
+    }
   </style>
 </head>
 
@@ -164,8 +232,12 @@
   <div class="profile-box">
     <h1>{{ user.username }}</h1>
     <p class="meta">가입일: {{ user.created_at.strftime('%Y-%m-%d') }}</p>
+    <a href="{{ url_for('chat_app', room_name=user.username) }}" class="join-btn">채팅방 접속</a>
 
-    <h2>내 도감</h2>
+    <h2>
+      유저 목록
+      <button onclick="openModal('modal1')">승인 요청</button>
+    </h2>
     <div class="character-list">
       {% for c in characters %}
         <img src="{{ url_for('static', filename='characters/' + c) }}" alt="{{ c }}">
@@ -174,7 +246,7 @@
       {% endfor %}
     </div>
 
-    <h2>받은 칭찬 내역</h2>
+    <h2>과제 목록</h2>
     {% for room in chat_rooms %}
       <div class="room-block">
         <h3 class="room-title">
@@ -197,6 +269,69 @@
     {% else %}
       <p>참여 중인 채팅방이 없습니다.</p>
     {% endfor %}
+    <div class="modal-overlay" id="modal1" onclick="handleOverlayClick(event, 'modal1')">
+        <div class="modal">
+            <h3 class="modal-header">승인 요청 목록</h3>
+            <div id="approveUserList"></div>
+            <div class="modal-footer">
+                <button class="close-btn" onclick="closeModal('modal1')">닫기</button>
+            </div>
+        </div>
+    </div>    
   </div>
+  <script>
+    function openModal(id) {
+      document.getElementById(id).style.display = "flex";
+        if (id === "modal1") {
+            loadApproveUserList();
+        }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = "none";
+          currentEditItem = null;
+    }
+
+    function handleOverlayClick(event, modalId) {//배경을 클릭했을 때 화면 닫기
+        if (event.target === event.currentTarget) {
+          closeModal(modalId);
+        }
+    }    
+    function loadApproveUserList() { // 로그인한 사람이 admin일때 모달이 뜨게해서 모달이 뜬사람의 로그인정보 활용한거임
+        const adminUsername = "{{ username }}";
+        const approveUserListDiv = document.getElementById('approveUserList');
+        approveUserListDiv.innerHTML = ''; // 기존 버튼 제거
+
+        fetch(`/get_approve_users?admin=${encodeURIComponent(adminUsername)}`)
+            .then(res => res.json())
+            .then(users => {
+                if (users.length === 0) {
+                    approveUserListDiv.innerHTML = '<p>승인 요청이 없습니다.</p>';
+                    return;
+                }
+                users.forEach(user => {
+                    const btn = document.createElement("button");
+                    btn.textContent = user.username;
+                    btn.onclick = async () => {
+                        const admin = "{{ username }}"; // 현재 로그인한 관리자 이름(채팅방 이름)
+                        const res = await fetch("/approve_user", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ username: user.username, admin }) // username과 admin 전달
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            alert(`${user.username} 승인 완료`);
+                            loadApproveUserList(); // 목록 새로고침
+                        } else {
+                            alert("승인 실패");
+                        }
+                    };
+                    approveUserListDiv.appendChild(btn);
+                });
+            });
+    }
+  </script>
 </body>
+
 </html>
