@@ -101,27 +101,17 @@
     .join-btn:hover {
     background-color: #acacac;
     }
-    .character-list {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 15px;
+    .user-list {
       max-height: 200px;
-      overflow: auto;
     }
 
-    .character-list img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
+    .user-info {
+      background-color: #fafafa;
+      border: 1px solid #eee;
       border-radius: 10px;
-      border: 1px solid #ddd;
-      transition: transform 0.2s;
-    }
-
-    .character-list img:hover {
-      transform: scale(1.1);
+      padding: 10px;
+      text-align: left;
+      margin-top: 10px;
     }
 
     .praise-list {
@@ -238,14 +228,21 @@
       유저 목록
       <button onclick="openModal('modal1')">승인 요청</button>
     </h2>
-    <div class="character-list">
-      {% for c in characters %}
-        <img src="{{ url_for('static', filename='characters/' + c) }}" alt="{{ c }}">
-      {% else %}
-        <p>아직 획득한 캐릭터가 없습니다.</p>
-      {% endfor %}
-    </div>
+    <div class="user-list">
+      <ul>
+        {% for u in chat_room.users %}
+          <div class="user-info">
+            <b>이름:</b> {{ u.username }}<br>
+            <b>포인트:</b> {{ u.point }}
+          </div>
+        {% endfor %}
+      </ul>
 
+      {% if not chat_room.users %}
+        <p>아직 획득한 캐릭터가 없습니다.</p>
+      {% endif %}
+    </div>
+<!--
     <h2>과제 목록</h2>
     {% for room in chat_rooms %}
       <div class="room-block">
@@ -269,6 +266,9 @@
     {% else %}
       <p>참여 중인 채팅방이 없습니다.</p>
     {% endfor %}
+    -->
+
+    
     <div class="modal-overlay" id="modal1" onclick="handleOverlayClick(event, 'modal1')">
         <div class="modal">
             <h3 class="modal-header">승인 요청 목록</h3>

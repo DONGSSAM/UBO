@@ -30,7 +30,8 @@ def login():
         # chat_rooms에서 해당 유저의 approved 상태 확인
         chat_rooms_list = user.get("chat_rooms", [])
         approved = True
-        for room_name in chat_rooms_list:
+        for room in chat_rooms_list:
+            room_name = room.get("room_name")
             chat_room = chat_rooms.find_one({"admin_name": room_name})
             if chat_room:
                 user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
@@ -209,22 +210,16 @@ def user_manage():
 
     username = session["username"]
     user_data = users.find_one({"username": username})
+    chat_data = chat_rooms.find_one({"admin_name": username})
 
-    if not user_data:
-        return "유저 정보를 찾을 수 없습니다.", 404
-
-    # 채팅방 및 참가자 목록
-    chat_rooms_list = []
-    for room_name in user_data.get("chat_rooms", []):
-        chat_room = chat_rooms.find_one({"admin_name": room_name})
-        if chat_room:
-            chat_rooms_list.append(chat_room)
+    if not chat_data:
+        return "채팅방을 찾을 수 없습니다.", 404
 
     return render_template(
         "user_manage.html",
         user=user_data,
         username=username,
-        chat_rooms=chat_rooms_list
+        chat_room=chat_data
     )
 
 #채팅방 관련 코드
