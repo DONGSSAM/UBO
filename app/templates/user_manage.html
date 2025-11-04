@@ -103,6 +103,13 @@
     }
     .user-list {
       max-height: 200px;
+      text-align: left;
+      overflow-y: auto;
+    }
+    .user-list ul, .mission-list ul {
+      list-style-type: none; 
+      padding-left: 0;       
+      margin: 0;              
     }
 
     .user-info {
@@ -114,10 +121,12 @@
       margin-top: 10px;
     }
 
-    .praise-list {
+    .mission-list {
       max-height: 200px;
+      text-align: left;
+      overflow-y: auto;
     }
-    .praise {
+    .mission-info {
       background-color: #fafafa;
       border: 1px solid #eee;
       border-radius: 10px;
@@ -126,21 +135,10 @@
       margin-top: 10px;
     }
 
-    .praise b {
+    .mission b {
       color: #333;
     }
 
-    .room-block {
-      margin-top: 15px;
-      text-align: left;
-      overflow-y: auto;
-    }
-
-    .room-block h3 {
-      font-size: 1.1em;
-      color: #555;
-      margin-bottom: 5px;
-    }
 
     p {
       color: #666;
@@ -185,7 +183,7 @@
   		margin: 0;
 		}        
         
-        #toggleSettingsBtn {
+    #toggleSettingsBtn {
   		padding: 5px 12px;
   		cursor: pointer;
 		}
@@ -231,44 +229,36 @@
     <div class="user-list">
       <ul>
         {% for u in chat_room.users %}
-          <div class="user-info">
+          <li class="user-info">
             <b>이름:</b> {{ u.username }}<br>
             <b>포인트:</b> {{ u.point }}
-          </div>
+          </li>
         {% endfor %}
       </ul>
 
-      {% if not chat_room.users %}
-        <p>아직 획득한 캐릭터가 없습니다.</p>
-      {% endif %}
-    </div>
-<!--
-    <h2>과제 목록</h2>
-    {% for room in chat_rooms %}
-      <div class="room-block">
-        <h3 class="room-title">
-            채팅방: {{ room.room_name }}
-            <a href="{{ url_for('chat_app', room_name=room.room_name) }}" class="join-btn">접속</a>
-        </h3>
-        <div class="praise-list">
-          {% if room.praises %}
-            {% for p in room.praises %}
-              <div class="praise">
+    {% if not chat_room.users %}
+      <p>아직 유저가 없습니다.</p>
+    {% endif %}
+  </div>
+
+  <h2>과제 목록</h2>
+    <div class="room-block">
+      <div class="mission-list">
+        <ul>
+          {% if chat_room.missions %}
+            {% for p in chat_room.missions %}
+              <div class="mission-info">
                 <b>내용:</b> {{ p.content }}<br>
-                <b>점수:</b> {{ p.point }}
+                <b>점수:</b> {{ p.reward }}
               </div>
             {% endfor %}
           {% else %}
-            <p>아직 받은 칭찬이 없습니다.</p>
+            <p>아직 과제가 없습니다.</p>
           {% endif %}
-        </div>
+        </ul>
       </div>
-    {% else %}
-      <p>참여 중인 채팅방이 없습니다.</p>
-    {% endfor %}
-    -->
+    </div>
 
-    
     <div class="modal-overlay" id="modal1" onclick="handleOverlayClick(event, 'modal1')">
         <div class="modal">
             <h3 class="modal-header">승인 요청 목록</h3>
