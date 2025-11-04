@@ -429,7 +429,7 @@
         flex: 1;
         }
 
-        .rule-actions {
+        .rule-actions .mission-actions {
         margin-left: 8px;
         }        
 
@@ -624,7 +624,7 @@
   		<div class="modal" >
     		<div class="modal-header">
       			<h2>일일 과제</h2>
-      			<button id="toggleMissionSettingsBtn" onclick="toggleEditMode()">설정</button>
+      			<button id="toggleMissionSettingsBtn" onclick="toggleMissionEditMode()">설정</button>
     		</div>
     	<ul id="missionList">
     	</ul>
@@ -634,7 +634,7 @@
     		</div>
   		</div>
 	</div>
-    <!-- submitMission 함수 서버랑 연동되게 만들고 toggleEditMode가 규칙리스트랑 연동됨 미션이랑 연동되게 바꾸기 modal7 완전히 수정 -->
+    <!--  toggleEditMode가 규칙리스트랑 연동됨 미션이랑 연동되게 바꾸기 modal7 완전히 수정 -->
     <div class="modal-overlay" id="modal6" onclick="handleOverlayClick(event, 'modal6')">
   		<div class="modal">
     	<h2 class="modal-header">과제 추가</h2>
@@ -661,13 +661,13 @@
         </div>
   		</div>
 	</div>
-<!--
+
     <div class="modal-overlay" id="modal7" onclick="handleOverlayClick(event, 'modal7')">
         <div class="modal">
             <h2 class="modal-header">과제 수정</h2>
             <input
             type="text"
-            id="editRuleInput" 
+            id="editMissionInput" 
         
             onkeydown="moveToEditScoreEnter(event)"
             style="width:100%; margin-bottom:10px;"
@@ -675,18 +675,17 @@
             
             <input
             type="number"
-            id="editScoreInput"
+            id="editRewardInput"
             
             min="0"
             onkeydown="confirmEditEnter(event)"
             style="width:100%; margin-bottom:10px;"
             >
             <div class="modal-footer">
-            <button class="close-btn" onclick="confirmEdit()">수정</button> 
-            <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
+            <button class="close-btn" onclick="confirmMissionEdit()">수정</button> 
+            <button class="close-btn" onclick="closeModal('modal7')">닫기</button>
             </div>
         </div>
--->
     </div>
 
     <audio id="audioPlayer" controls style="display:none"></audio>
@@ -1220,6 +1219,22 @@
   		function closeModal(id) {
     		document.getElementById(id).style.display = "none";
             currentEditItem = null;
+            if (id === "modal1" && editMode) {
+                editMode = false;
+                const ruleItems = document.querySelectorAll("#ruleList li");
+                ruleItems.forEach((item) => {
+                const actions = item.querySelector(".rule-actions");
+                if (actions) actions.remove();
+                });
+            }
+            else if (id === "modal5" && editMode) {
+                editMode = false;
+                const missionItems = document.querySelectorAll("#missionList li");
+                missionItems.forEach((item) => {
+                const actions = item.querySelector(".mission-actions");
+                if (actions) actions.remove();
+                });
+            }
   		}
 		function handleOverlayClick(event, modalId) {//배경을 클릭했을 때 화면 닫기
   			if (event.target === event.currentTarget) {
@@ -1327,7 +1342,8 @@
 
         let currentEditItem = null;//li 저장용 변수        
         let editMode = false;
-        
+
+        //규칙 수정 함수
         function toggleEditMode() {//수정모드 수정할 때 필요한 코드가 있음
         editMode = !editMode;//수정,삭제모드일때만 버튼이 새로 생성돼서 표시되게
         const ruleItems = document.querySelectorAll("#ruleList li");//li각각 불러오기 li의 span-text, span-button
@@ -1384,7 +1400,7 @@
         }
 
         function editRule(item) {
-            currentEditItem = item;
+            currentEditItem = item;//변수를 새로 정의한 게 아니라서 전역변수의 값에 접근한 거임
             
             const textSpan = item.querySelector(".rule-text");
             const fullText = textSpan.textContent.trim();
@@ -1445,6 +1461,7 @@
             });
         }
 
+        //점수 부여 모달 열기 함수
         function openScoreModal(item) {
             // 선택한 규칙 저장
             currentEditItem = item;
@@ -1486,11 +1503,128 @@
                 });
         }
 
+        //미션 관련 설정 함수
+        function toggleMissionEditMode() {//수정모드 수정할 때 필요한 코드가 있음
+        editMode = !editMode;//수정,삭제모드일때만 버튼이 새로 생성돼서 표시되게
+        const missionItems = document.querySelectorAll("#missionList li");//li각각 불러오기 li의 span-text, span-button
+
+        missionItems.forEach((item) => {
+            if (editMode) {
+            const actions = document.createElement("span");
+            actions.className = "mission-actions";//각각의 span에 클래스명 지정
+
+            // 수정 버튼
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "수정";
+            editBtn.className = "edit-btn";
+            editBtn.onclick = () => editMission(item);//수정 기능은 따로 밑에 함수로 빼둠
+
+            // 삭제 버튼
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "삭제";
+            deleteBtn.className = "delete-btn";
+            deleteBtn.onclick = () => {
+            const id = item.dataset.id;
+            fetch('/delete_mission', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            }).then(res => res.json())
+                .then(data => {
+                if (data.success) {
+                    item.remove();
+                } else {
+                    alert('삭제 실패');
+                }
+                });
+                document.getElementById("toggleMissionSettingsBtn").click();
+            };
+
+            // 중복 추가 방지
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+            if (!item.querySelector(".mission-actions")) item.appendChild(actions);
+
+            }
+            else {
+            // 편집 모드 해제 시 버튼 묶음 전체 제거
+            const actions = item.querySelector(".mission-actions");
+            if (actions) actions.remove();
+            }
+        });
+        }
+
+        function editMission(item) {
+            currentEditItem = item;//변수를 새로 정의한 게 아니라서 전역변수의 값에 접근한 거임
+            
+            const textSpan = item.querySelector(".mission-text");
+            const fullText = textSpan.textContent.trim();
+
+            // "규칙 내용 (5점)" 형태라면 점수 분리하기
+            const match = fullText.match(/^(.*)\s\((\d+)점\)$/);
+
+            let oldContent = fullText;
+            let oldReward = "";
+
+            if (match) {
+                oldContent = match[1]; // 규칙 내용
+                oldReward = match[2];   // 점수 (문자열)
+            }
+
+            const contentInput = document.getElementById("editMissionInput");
+            const rewardInput = document.getElementById("editRewardInput");
+
+            // placeholder 대신 바로 value로 넣는 게 더 UX 좋음
+            contentInput.value = oldContent;
+            rewardInput.value = oldReward;
+
+            document.getElementById("modal7").style.display = "flex"; // 모달 띄우기
+        }
+
+        function confirmMissionEdit() {
+            const contentInput = document.getElementById("editMissionInput");
+            const rewardInput = document.getElementById("editRewardInput");
+            const newText = contentInput.value.trim();
+            const newReward = rewardInput.value.trim();
+
+            if (!newText) {
+                alert("수정할 내용을 입력해주세요.");
+                return;
+            }
+            if (newReward === "" || isNaN(newReward)) {
+                alert("유효한 점수를 입력해주세요.");
+                return;
+            }
+            const item = currentEditItem;
+            const missionId = item.dataset.id;
+            const textSpan = item.querySelector(".mission-text");
+
+            fetch("/update_mission", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: missionId, content: newText, reward: Number(newReward) }),
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    textSpan.textContent = `${newText} (${newReward}점)`;
+                    document.getElementById("toggleMissionSettingsBtn").click(); // 설정 버튼 자동 닫기
+                    closeModal("modal7");
+                } else {
+                    alert("수정 실패");
+                }
+            });
+        }
 
         function confirmEditEnter(event) {
           if (event.key === "Enter") {
             const input = event.target;
-            confirmEdit();
+            if (input.id === "editScoreInput") {
+            confirmEdit(); // 점수 수정용
+            } 
+            else if (input.id === "editRewardInput") {
+            confirmMissionEdit(); // 미션 보상 수정용
+            }
           }            
         }
         function moveToEditScoreEnter(event) {
@@ -1500,9 +1634,9 @@
                 document.getElementById("editScoreInput").focus(); // 점수 입력칸으로 이동
                 return;
             }
-            else if (event.target.id === "newMissionInput") {
+            else if (event.target.id === "editMissionInput") {
                 event.preventDefault(); // 폼 제출 방지
-                document.getElementById("newRewardInput").focus(); // 점수 입력칸으로 이동
+                document.getElementById("editRewardInput").focus(); // 점수 입력칸으로 이동
                 return;
             }
           }
@@ -1553,7 +1687,8 @@
                 document.getElementById("newRewardInput")
             );
         }
-        
+
+        //규칙 불러오기 함수
 		function loadRules() {
   			fetch("/get_rules")
     		.then(res => res.json())
@@ -1573,6 +1708,7 @@
       		});
     		});
 		}
+        //미션 불러오기 함수
         function loadMissions() { // username: 로그인 유저 이름
             fetch("/get_missions")
             .then(res => res.json())

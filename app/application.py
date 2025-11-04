@@ -660,7 +660,7 @@ def delete_rule():
         {"$pull": {"rules": {"_id": ObjectId(rule_id)}}}
     )
 
-    if result.deleted_count == 1:
+    if result.modified_count == 1:
         return jsonify({'success': True})
     else:
         return jsonify({'success': False, 'message': '삭제 실패'})
@@ -741,29 +741,29 @@ def update_checked():
     else:
         return jsonify(success=False, message="수정 실패 또는 변경 사항 없음")
 
-'''
-@app.route("/update_rule", methods=["POST"])
-def update_rule():
+
+@app.route("/update_mission", methods=["POST"])
+def update_mission():
     data = request.get_json()
-    rule_id = data.get("id")
+    mission_id = data.get("id")
     new_content = data.get("content", "").strip()
-    new_score = data.get("score")
+    new_reward = data.get("reward")
     admin_name = session.get("username")
 
-    if not rule_id or not new_content:
+    if not mission_id or not new_content:
         return jsonify(success=False, message="ID와 내용은 필수입니다.")
 
     #업데이트 할 필드를 미리 정의한 딕셔너리
-    update_fields = {"rules.$.content": new_content}
+    update_fields = {"missions.$.content": new_content}
     # 점수가 None이 아니고 숫자라면 같이 업데이트
-    if new_score is not None:
+    if new_reward is not None:
         try:
-            update_fields["rules.$.score"] = float(new_score)
+            update_fields["missions.$.reward"] = float(new_reward)
         except ValueError:
             return jsonify(success=False, message="점수는 숫자여야 합니다.")
 
     result = chat_rooms.update_one(
-        {"admin_name": admin_name, "rules._id": ObjectId(rule_id)},
+        {"admin_name": admin_name, "missions._id": ObjectId(mission_id)},
         {"$set": update_fields}
     )
 
@@ -772,23 +772,23 @@ def update_rule():
     else:
         return jsonify(success=False, message="수정 실패 또는 변경 사항 없음")
 
-@app.route('/delete_rule', methods=['POST'])
-def delete_rule():
+@app.route('/delete_mission', methods=['POST'])
+def delete_mission():
     data = request.get_json()
-    rule_id = data.get('id')
+    mission_id = data.get('id')
     admin_name = session.get("username")
-    if not rule_id:
+    if not mission_id:
         return jsonify({'success': False, 'message': 'ID 없음'}), 400
 
     result = chat_rooms.update_one(
         {"admin_name": admin_name},
-        {"$pull": {"rules": {"_id": ObjectId(rule_id)}}}
+        {"$pull": {"missions": {"_id": ObjectId(mission_id)}}}
     )
 
-    if result.deleted_count == 1:
+    if result.modified_count == 1:
         return jsonify({'success': True})
     else:
         return jsonify({'success': False, 'message': '삭제 실패'})
-'''
+
 if __name__ == "__main__":
     socketio.run(app, host='0.0.0.0', port=5000)
