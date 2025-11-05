@@ -233,10 +233,12 @@
     <div class="user-list">
       <ul>
         {% for u in chat_room.users %}
-          <li class="user-info">
-            <b>이름:</b> {{ u.username }}<br>
-            <b>포인트:</b> {{ u.point }}
-          </li>
+          {% if u.approved %}
+            <li class="user-info" onclick="openModal('modal2')">
+              <b>이름:</b> {{ u.username }}<br>
+              <b>포인트:</b> {{ u.point }}
+            </li>
+          {% endif %}
         {% endfor %}
       </ul>
 
@@ -251,7 +253,7 @@
         <ul>
           {% if chat_room.missions %}
             {% for p in chat_room.missions %}
-              <div class="mission-info">
+              <div class="mission-info" onclick="openModal('modal3')">
                 <b>내용:</b> {{ p.content }}<br>
                 <b>점수:</b> {{ p.reward }}
               </div>
@@ -263,15 +265,51 @@
       </div>
     </div>
 
-    <div class="modal-overlay" id="modal1" onclick="handleOverlayClick(event, 'modal1')">
-        <div class="modal">
-            <h3 class="modal-header">승인 요청 목록</h3>
-            <div id="approveUserList"></div>
-            <div class="modal-footer">
-                <button class="close-btn" onclick="closeModal('modal1')">닫기</button>
-            </div>
-        </div>
-    </div>    
+  <div class="modal-overlay" id="modal1" onclick="handleOverlayClick(event, 'modal1')">
+      <div class="modal">
+          <h3 class="modal-header">승인 요청 목록</h3>
+          <div id="approveUserList"></div>
+          <div class="modal-footer">
+              <button class="close-btn" onclick="closeModal('modal1')">닫기</button>
+          </div>
+      </div>
+  </div>    
+
+  <div class="modal-overlay" id="modal2" onclick="handleOverlayClick(event, 'modal2')">
+    <div class="modal">
+      <h3 class="modal-header">유저 목록 상세보기</h3>
+      <div id="userModalContent">
+        {% if chat_room.users %}
+          {% for u in chat_room.users %}
+            <p><b>{{ u.username }}</b> — {{ u.point }}점</p>
+          {% endfor %}
+        {% else %}
+          <p>아직 유저가 없습니다.</p>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button class="close-btn" onclick="closeModal('modal2')">닫기</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal-overlay" id="modal3" onclick="handleOverlayClick(event, 'modal3')">
+    <div class="modal">
+      <h3 class="modal-header">과제 목록 상세보기</h3>
+      <div id="missionModalContent">
+        {% if chat_room.missions %}
+          {% for p in chat_room.missions %}
+            <p><b>{{ p.content }}</b> — {{ p.reward }}점</p>
+          {% endfor %}
+        {% else %}
+          <p>아직 과제가 없습니다.</p>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
+      </div>
+    </div>
   </div>
   <script>
 
