@@ -202,7 +202,9 @@ def profile():
         chat_rooms=chat_rooms
     )
 
-# 유저 관리 페이지 chat_rooms에서 데이터 가져와서 관리하기
+
+# 유저 관리 페이지
+
 @app.route("/usermanage")
 def user_manage():
     if not session.get("username") or session.get("role") != "admin":
@@ -221,6 +223,32 @@ def user_manage():
         username=username,
         chat_room=chat_data
     )
+
+@app.route('/get_user_detail', methods=['POST'])
+def get_user_detail():
+    data = request.get_json()
+    username = data.get('username')
+    room_name = data.get('room_name')
+
+    if not username:
+        return jsonify({'success': False, 'message': 'username 누락'})
+
+    user = users.find_one({'username': username})
+
+    if not user:
+        return jsonify({'success': False, 'message': '유저를 찾을 수 없음'})
+    
+    target_room = next((r for r in user.get('chat_rooms', []) if r.get('room_name') == room_name), None)
+
+    # praises나 characters가 없을 때 대비
+    praises = target_room.get('praises', [])
+    characters = user.get('characters', [])
+
+    return jsonify({
+        'success': True,
+        'praises': praises,
+        'characters': characters
+    })
 
 #채팅방 관련 코드
 
