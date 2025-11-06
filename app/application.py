@@ -250,6 +250,25 @@ def get_user_detail():
         'characters': characters
     })
 
+@app.route("/user_delete", methods=['POST'])
+def delete_user():
+    data = request.get_json()
+    target_user = data.get('target_user')
+    admin_name = session.get("username")
+
+    if not target_user:
+        return jsonify({'success': False, 'message': 'username 누락'}), 400
+
+    result = chat_rooms.update_one(
+        {"admin_name": admin_name},
+        {"$pull": {"users": {"username": target_user}}}
+    )
+
+    if result.modified_count > 0:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': '삭제된 유저 없음'})
+    
 #채팅방 관련 코드
 
 @app.route("/chat")

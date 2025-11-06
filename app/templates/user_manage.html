@@ -101,18 +101,18 @@
     .join-btn:hover {
     background-color: #acacac;
     }
-    .user-list {
+    .user-list, .mission-list {
       max-height: 200px;
       text-align: left;
       overflow-y: auto;
     }
-    .user-list ul, .mission-list ul {
+    .user-list ul, .mission-list ul, #ui_praises {
       list-style-type: none; 
       padding-left: 0;       
       margin: 0;              
     }
 
-    .user-info {
+    .user-info, .mission-info, .praise-item {
       background-color: #fafafa;
       border: 1px solid #eee;
       border-radius: 10px;
@@ -144,19 +144,6 @@
       transform: scale(1.1);
     }
 
-    .mission-list {
-      max-height: 200px;
-      text-align: left;
-      overflow-y: auto;
-    }
-    .mission-info {
-      background-color: #fafafa;
-      border: 1px solid #eee;
-      border-radius: 10px;
-      padding: 10px;
-      text-align: left;
-      margin-top: 10px;
-    }
 
     .user-info:hover, .mission-info:hover {
       background-color: #f0f0f0;
@@ -240,6 +227,11 @@
       width: 100%;
       text-align: left;
     }
+
+    .delete-btn {
+    color: red;
+    border: 2px solid red;
+    }  
   </style>
 </head>
 
@@ -315,6 +307,7 @@
         <ul id="ui_praises" style="max-height:160px; overflow:auto; padding-left:16px;"></ul>
       </div>
       <div class="modal-footer">
+        <button class="delete-btn" onclick="deleteUser()">유저 삭제</button>
         <button class="close-btn" onclick="closeModal('modal2')">닫기</button>
       </div>
     </div>
@@ -379,6 +372,7 @@
           if (data.praises && data.praises.length > 0) {
             data.praises.forEach(p => {
               const li = document.createElement('li');
+              li.classList.add('praise-item');
               li.innerHTML = `<b>${p.content}</b> (+${p.point}점)`; // ✅ content와 point 표시
               praiseList.appendChild(li);
             });
@@ -446,6 +440,39 @@
                     approveUserListDiv.appendChild(btn);
                 });
             });
+    }
+
+    function loadUsers() {
+      
+    }
+
+    function deleteUser() {
+      const target_user = document.getElementById('ui_username').textContent.trim(); // 현재 모달에 표시된 유저 이름
+
+      if (!target_user) {
+        alert('유저 이름을 찾을 수 없습니다.');
+        return;
+      }
+
+      if (!confirm(`${target_user} 님을 삭제하시겠습니까?`)) return;
+
+      fetch('/user_delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_user })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert(`${target_user} 유저가 삭제되었습니다.`);
+          closeModal('modal2');
+          // 유저 목록 새로고침
+          //loadUsers(); 
+        } else {
+          alert(`삭제 실패: ${data.message}`);
+        }
+      })
+      .catch(err => console.error('Error:', err));
     }
   </script>
 </body>
