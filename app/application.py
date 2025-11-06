@@ -707,7 +707,9 @@ def delete_rule():
     else:
         return jsonify({'success': False, 'message': '삭제 실패'})
 
+
 # 미션 관련 코드
+
 @app.route("/add_mission", methods=["POST"])
 def add_mission():
     data = request.get_json()
@@ -753,6 +755,26 @@ def get_missions():
         r_copy['_id'] = str(r_copy['_id'])  # ObjectId를 문자열로 변환
         mission_list.append(r_copy)
     return jsonify(mission_list)
+
+@app.route("/get_mission_detail/<mission_id>")
+def get_mission_detail(mission_id):
+    admin_name = session.get("username")
+
+    chat_room = chat_rooms.find_one({"admin_name": admin_name}, {"missions": 1, "users": 1})
+    if not chat_room:
+        return jsonify(success=False, message="채팅방 없음")
+
+    # 미션 찾기
+    mission = next((m for m in chat_room["missions"] if str(m["_id"]) == mission_id), None)
+    if not mission:
+        return jsonify(success=False, message="미션 없음")
+
+    # ObjectId 문자열 변환
+    mission["_id"] = str(mission["_id"])
+
+    user_list = [u["username"] for u in chat_room["users"] if u.get("approved")]
+
+    return jsonify(success=True, mission=mission, users=user_list)
 
 @app.route("/update_checked", methods=["POST"])
 def update_checked():

@@ -266,22 +266,22 @@
   </div>
 
   <h2>과제 목록</h2>
-    <div class="room-block">
-      <div class="mission-list">
-        <ul>
-          {% if chat_room.missions %}
-            {% for p in chat_room.missions %}
-              <div class="mission-info" onclick="openModal('modal3')">
-                <b>내용:</b> {{ p.content }}<br>
-                <b>점수:</b> {{ p.reward }}
-              </div>
-            {% endfor %}
-          {% else %}
-            <p>아직 과제가 없습니다.</p>
-          {% endif %}
-        </ul>
-      </div>
+  <div class="room-block">
+    <div class="mission-list">
+      <ul>
+        {% for p in chat_room.missions %}
+          <li class="mission-info"
+              onclick="openMissionModal('{{ p._id }}')">
+            <b>내용:</b> {{ p.content }}<br>
+            <b>점수:</b> {{ p.reward }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% if not chat_room.missions %}
+      <p>아직 과제가 없습니다.</p>
+    {% endif %}     
     </div>
+  </div>
 
   <div class="modal-overlay" id="modal1" onclick="handleOverlayClick(event, 'modal1')">
       <div class="modal">
@@ -318,13 +318,14 @@
     <div class="modal">
       <h3 class="modal-header">과제 정보</h3>
       <div id="missionModalContent">
-        {% if chat_room.missions %}
-          {% for p in chat_room.missions %}
-            <p><b>{{ p.content }}</b> — {{ p.reward }}점</p>
-          {% endfor %}
-        {% else %}
-          <p>아직 과제가 없습니다.</p>
-        {% endif %}
+        <p>내용:<b id="ui_mission">-</b></p>
+        <p>점수: <span id="ui_reward">0</span>점</p>
+        <div id="userChecklist">
+        </div>
+        <div>
+          <p>체크한 사람:</p>
+          <ol id="checkedUsersList"></ol>
+        </div>        
       </div>
       <div class="modal-footer">
         <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
@@ -339,7 +340,9 @@
       const room_name = "{{ chat_room.name }}";
       document.getElementById('ui_username').textContent = username;
       document.getElementById('ui_point').textContent = point;
+
       openModal(modal);
+
       try {
         const res = await fetch('/get_user_detail', {
           method: 'POST',
@@ -387,6 +390,101 @@
         }
       } catch (err) {
         console.error('요청 중 오류 발생:', err);
+      }
+    }
+
+    async function openMissionModal(missionId) {
+    try {
+      // 1️⃣ 미션 정보 가져오기
+      const missionRes = await fetch(`/get_mission_detail/${missionId}`);
+      const missionData = await missionRes.json();
+      if (!missionData.success) {
+        alert("미션 정보를 불러오지 못했습니다.");
+        return;
+      }
+
+      const mission = missionData.mission;
+      const users = missionData.users;
+
+      // 3️⃣ 모달에 데이터 표시
+      document.getElementById("ui_mission").textContent = mission.content;
+      document.getElementById("ui_reward").textContent = mission.reward;
+
+      const checklist = document.getElementById("userChecklist");
+      checklist.innerHTML = ""; // 초기화 
+
+      openModal('modal3');
+
+      users.forEach(u => {
+        const username = u;
+        const checked = mission.checked && mission.checked.includes(username);
+        const div = document.createElement("div");
+        div.classList.add("user-check");
+        div.innerHTML = `
+          <label>
+            <input type="checkbox"
+                  ${checked ? "checked" : ""}
+                  onchange="toggleMissionCheck('${mission._id}', '${username}', this)">
+            ${username}
+          </label>
+        `;
+        checklist.appendChild(div);
+        
+        //모달 열 때 체크한 사람 리스트 가져옴
+        refreshCheckedUsersList(mission._id);
+      }); 
+    } catch (err) {
+      console.error("미션 모달 로딩 실패:", err);
+    }     
+    }
+
+    //missions에 check여부 업데이트 함
+    async function toggleMissionCheck(missionId, username, checkbox) {
+      const admin = "{{ chat_room.admin_name }}";
+      const checked = checkbox.checked;
+
+      //기존 백엔드 함수 사용
+      const res = await fetch("/update_checked", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mission_id: missionId,
+          username: username,
+          admin: admin,
+          checked: checked
+        })
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert("업데이트 실패: " + data.message);
+        checkbox.checked = !checked;
+      }
+      // 체크한 사람 목록 갱신
+      refreshCheckedUsersList(missionId);
+    }
+
+    async function refreshCheckedUsersList(missionId) {
+      try {
+        const res = await fetch(`/get_mission_detail/${missionId}`);
+        const data = await res.json();
+
+        if (!data.success) return;
+
+        const mission = data.mission;
+        const checkedUsers = mission.checked || []; // 서버에서 체크 순서대로 가져옴
+        const checkedList = document.getElementById("checkedUsersList");
+
+        checkedList.innerHTML = ""; // 초기화
+
+        checkedUsers.forEach((username, index) => {
+          const li = document.createElement("li");
+          li.textContent = username;
+          checkedList.appendChild(li);
+        });
+
+      } catch (err) {
+        console.error("체크리스트 갱신 실패:", err);
       }
     }
 
@@ -443,7 +541,38 @@
     }
 
     function loadUsers() {
-      
+      fetch('/get_users')
+        .then(res => res.json())
+        .then(users => { // ✅ 리스트 직접 받음
+          const userList = document.querySelector('.user-list ul');
+          userList.innerHTML = ''; // 기존 목록 초기화
+
+          if (!users || users.length === 0) {
+            // 유저가 없을 때 메시지 표시
+            document.querySelector('.user-list').innerHTML = '<p>아직 유저가 없습니다.</p>';
+            return;
+          }
+
+          users.forEach(user => {
+            const li = document.createElement('li');
+            li.className = 'user-info';
+            li.dataset.username = user.username;
+            li.dataset.point = user.point;
+
+            li.innerHTML = `
+              <b>이름:</b> ${user.username}<br>
+              <b>포인트:</b> ${user.point}
+            `;
+
+            // 유저 클릭 시 모달 열기
+            li.onclick = function () {
+              openUserModal('modal2', li);
+            };
+
+            userList.appendChild(li);
+          });
+        })
+        .catch(err => console.error('Error:', err));
     }
 
     function deleteUser() {
@@ -467,7 +596,7 @@
           alert(`${target_user} 유저가 삭제되었습니다.`);
           closeModal('modal2');
           // 유저 목록 새로고침
-          //loadUsers(); 
+          loadUsers(); 
         } else {
           alert(`삭제 실패: ${data.message}`);
         }
