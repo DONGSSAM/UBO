@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>  
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>  
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -333,6 +334,29 @@
     </div>
   </div>
   <script>
+    // 모달에서 현재 열려 있는 미션 ID를 전역 변수로 저장
+    let currentMissionId = null;
+
+    (function() {
+        const socket = io();
+
+        // 연결 상태 확인
+        console.log("Socket connected?", socket.connected);
+
+        socket.on("connect", () => {
+            console.log("Socket connected! ID:", socket.id);
+        });
+
+        socket.on("disconnect", () => {
+            console.log("Socket disconnected");
+        });
+
+        socket.on("mission_checked_update", data => {
+            if (currentMissionId === data.mission_id) {
+                refreshCheckedUsersList(data.mission_id);
+            }
+        });
+    })();
 
     async function openUserModal(modal, element) {
       const username = element.dataset.username;
@@ -394,49 +418,50 @@
     }
 
     async function openMissionModal(missionId) {
-    try {
-      // 1️⃣ 미션 정보 가져오기
-      const missionRes = await fetch(`/get_mission_detail/${missionId}`);
-      const missionData = await missionRes.json();
-      if (!missionData.success) {
-        alert("미션 정보를 불러오지 못했습니다.");
-        return;
-      }
+      currentMissionId = missionId; // 지금 열려 있는 미션의 ID 저장
+      try {
+        // 1️⃣ 미션 정보 가져오기
+        const missionRes = await fetch(`/get_mission_detail/${missionId}`);
+        const missionData = await missionRes.json();
+        if (!missionData.success) {
+          alert("미션 정보를 불러오지 못했습니다.");
+          return;
+        }
 
-      const mission = missionData.mission;
-      const users = missionData.users;
+        const mission = missionData.mission;
+        const users = missionData.users;
 
-      // 3️⃣ 모달에 데이터 표시
-      document.getElementById("ui_mission").textContent = mission.content;
-      document.getElementById("ui_reward").textContent = mission.reward;
+        // 3️⃣ 모달에 데이터 표시
+        document.getElementById("ui_mission").textContent = mission.content;
+        document.getElementById("ui_reward").textContent = mission.reward;
 
-      const checklist = document.getElementById("userChecklist");
-      checklist.innerHTML = ""; // 초기화 
+        const checklist = document.getElementById("userChecklist");
+        checklist.innerHTML = ""; // 초기화 
 
-      openModal('modal3');
+        openModal('modal3');
 
-      users.forEach(u => {
-        const username = u;
-        const checked = mission.checked && mission.checked.includes(username);
-        const div = document.createElement("div");
-        div.classList.add("user-check");
-        div.innerHTML = `
-          <label>
-            <input type="checkbox"
-                  ${checked ? "checked" : ""}
-                  onchange="toggleMissionCheck('${mission._id}', '${username}', this)">
-            ${username}
-          </label>
-        `;
-        checklist.appendChild(div);
-        
+        users.forEach(u => {
+          const username = u;
+          const checked = mission.checked && mission.checked.includes(username);
+          const div = document.createElement("div");
+          div.classList.add("user-check");
+          div.innerHTML = `
+            <label>
+              <input type="checkbox"
+                    ${checked ? "checked" : ""}
+                    onchange="toggleMissionCheck('${mission._id}', '${username}', this)">
+              ${username}
+            </label>
+          `;
+          checklist.appendChild(div);
+        }); 
+
         //모달 열 때 체크한 사람 리스트 가져옴
-        refreshCheckedUsersList(mission._id);
-      }); 
-    } catch (err) {
-      console.error("미션 모달 로딩 실패:", err);
-    }     
-    }
+        refreshCheckedUsersList(mission._id);        
+      } catch (err) {
+        console.error("미션 모달 로딩 실패:", err);
+      }     
+      }
 
     //missions에 check여부 업데이트 함
     async function toggleMissionCheck(missionId, username, checkbox) {
@@ -474,13 +499,33 @@
         const mission = data.mission;
         const checkedUsers = mission.checked || []; // 서버에서 체크 순서대로 가져옴
         const checkedList = document.getElementById("checkedUsersList");
+        const checklist = document.getElementById("userChecklist");
 
+        // 1️⃣ 체크한 사람 목록 갱신
         checkedList.innerHTML = ""; // 초기화
 
         checkedUsers.forEach((username, index) => {
           const li = document.createElement("li");
           li.textContent = username;
           checkedList.appendChild(li);
+        });
+
+
+        // 2️⃣ 체크박스 리스트 갱신
+        checklist.innerHTML = ""; // 초기화
+        const users = data.users; // 승인된 유저 리스트
+        users.forEach(username => {
+          const checked = checkedUsers.includes(username);
+          const div = document.createElement("div");
+          div.classList.add("user-check");
+          div.innerHTML = `
+            <label>
+              <input type="checkbox" ${checked ? "checked" : ""}
+                    onchange="toggleMissionCheck('${mission._id}', '${username}', this)">
+              ${username}
+            </label>
+          `;
+          checklist.appendChild(div);
         });
 
       } catch (err) {
@@ -497,7 +542,7 @@
 
     function closeModal(id) {
       document.getElementById(id).style.display = "none";
-          currentEditItem = null;
+          currentMissionId = null;
     }
 
     function handleOverlayClick(event, modalId) {//배경을 클릭했을 때 화면 닫기

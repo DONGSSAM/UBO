@@ -373,8 +373,17 @@ def get_room_name(user_doc, role, session_username):
 @socketio.on('join')
 def handle_join(data):
     room_name = data.get('room_name')
+    username = session.get("username")
+    role = session.get('role')
+
     join_room(room_name)
     print(f"{session.get('username')} 님이 {room_name} 방에 입장했습니다.")
+    
+    if role == "admin":
+        admin_room = f"admin_{username}"
+        join_room(admin_room)
+        print(f"{username} 님이 {admin_room} 방에 입장했습니다.")
+
 
 @socketio.on('message')
 def handle_message(data):
@@ -801,6 +810,12 @@ def update_checked():
         )
 
     if result.modified_count > 0:
+        admin_room = f"admin_{admin}"
+        socketio.emit(
+            "mission_checked_update",       # 이벤트 이름
+            {"mission_id": mission_id},     # 필요한 데이터
+            to= admin_room                # 모든 연결된 클라이언트에게 전송
+        )
         return jsonify(success=True)
     else:
         return jsonify(success=False, message="수정 실패 또는 변경 사항 없음")
