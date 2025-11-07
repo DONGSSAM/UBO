@@ -263,6 +263,10 @@ def delete_user():
         {"admin_name": admin_name},
         {"$pull": {"users": {"username": target_user}}}
     )
+    chat_rooms.update_many(
+        {"admin_name": admin_name},
+        {"$pull": {"missions.$[].checked": target_user}}
+    )
 
     if result.modified_count > 0:
         return jsonify({'success': True})

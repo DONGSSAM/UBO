@@ -156,7 +156,7 @@
 
 
     p {
-      color: #666;
+      color: #303030;
     }
 
 		.modal {
@@ -204,7 +204,7 @@
 		}
         
     .modal-footer {
-      margin-top: 15px;
+      margin-top: auto;
       padding: 5px 10px;
       background: white;
       color: white;
@@ -238,8 +238,8 @@
     /* 미션모달 스타일 */
     /* 큰 모달 */
     .large-modal {
-      width: 700px; 
-      max-width: 90vw;
+      width: 80vw;      /* 화면 가로 80% */
+      height: 80vh;     /* 화면 세로 80% */
     }
 
     /* 모달 바디 */
@@ -257,39 +257,54 @@
     /* 체크리스트와 체크한 사람 순서를 좌우로 배치 */
     .mission-body {
       display: flex;
+      flex-direction: row;
       gap: 20px;
+      position: relative;
+      flex: 1;
     }
 
     /* 왼쪽 체크리스트 */
-    .checklist {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
 
+
+    #userChecklist {
+      display: flex;          /* 버튼들을 가로로 배치 */
+      flex-wrap: wrap;        /* 공간 부족하면 다음 줄로 자동 줄바꿈 */
+      gap: 8px;               /* 버튼 사이 간격 */
+      flex: 1;             /* 왼쪽 영역 남은 공간 차지 */
+    }
+    #userChecklist .user-check {  /* div.user-check */
+      display: inline-flex;        /* 버튼을 가로로 유지 */
+    }
     /* 체크 버튼 스타일 */
-    .user-check button {
-      display: flex;
-      justify-content: space-between;
+    button.user-check {
+      flex: 0 1 auto;         /* 필요에 따라 줄바꿈 허용 */
       padding: 6px 12px;
       border: 1px solid #ccc;
       border-radius: 5px;
       cursor: pointer;
       background-color: #f0f0f0;
       font-size: 14px;
+      white-space: normal;    /* 길어지면 줄바꿈 */
+      text-align: center;
+      width: 150px;
+      height: 100px;
+      display: flex;          /* 플렉스 박스로 변경 */
+      justify-content: center; /* 수평 중앙 정렬 */
+      align-items: center;  
     }
 
-    .user-check button.checked {
-      background-color: #c6f6d5; /* 체크된 상태 색상 */
-      border-color: #68d391;
+    button.user-check.checked {
+      background-color: #bbd4fa;      /* 체크된 상태 색상 */
+      border-color: #99bff8;
     }
-
     /* 오른쪽 체크한 사람 목록 */
     .checked-list {
-      flex: 1;
+      position: absolute;
+      right: 0;             /* 오른쪽 끝 고정 */
+      width: 25%;          /* 원하는 고정 너비 */
       border-left: 1px solid #eee;
       padding-left: 15px;
+      flex: none;
     }
 
     .checked-list ol {
@@ -409,26 +424,7 @@
       </div>
     </div>
   </div>
-<!--  
-  <div class="modal-overlay" id="modal3" onclick="handleOverlayClick(event, 'modal3')">
-    <div class="modal">
-      <h3 class="modal-header">과제 정보</h3>
-      <div id="missionModalContent">
-        <p>내용:<b id="ui_mission">-</b></p>
-        <p>점수: <span id="ui_reward">0</span>점</p>
-        <div id="userChecklist">
-        </div>
-        <div>
-          <p>체크한 사람:</p>
-          <ol id="checkedUsersList"></ol>
-        </div>        
-      </div>
-      <div class="modal-footer">
-        <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
-      </div>
-    </div>
-  </div>
---> 
+ 
   <script>
     // 모달에서 현재 열려 있는 미션 ID를 전역 변수로 저장
     let currentMissionId = null;
@@ -542,19 +538,24 @@
 
         //모달 열었을 때 체크리스트 표시
         users.forEach(u => {
-          const username = u;
-          const checked = mission.checked && mission.checked.includes(username);
-          const div = document.createElement("div");
-          div.classList.add("user-check");
-          div.innerHTML = `
-            <label>
-              <input type="checkbox"
-                    ${checked ? "checked" : ""}
-                    onchange="toggleMissionCheck('${mission._id}', '${username}', this)">
-              ${username}
-            </label>
-          `;
-          checklist.appendChild(div);
+            const username = u;
+            const checked = mission.checked && mission.checked.includes(username);
+
+            const btn = document.createElement("button");
+            btn.classList.add("user-check");
+            btn.innerHTML = (checked ? "✔️ " : "") + username;
+            if (checked) btn.classList.add("checked"); // 이미 체크된 상태 표시
+
+            // 클릭 이벤트
+            btn.addEventListener("click", () => {
+                const isChecked = btn.classList.toggle("checked"); // 클래스 토글
+                btn.innerHTML = (checked ? "✔️ " : "") + username;
+                
+                toggleMissionCheck(mission._id, username, isChecked); // 서버에 체크/체크해제 전송
+            });
+
+          checklist.appendChild(btn);
+
         }); 
 
         //모달 열 때 체크한 사람 리스트 가져옴
@@ -565,9 +566,8 @@
       }
 
     //missions에 check여부 업데이트 함
-    async function toggleMissionCheck(missionId, username, checkbox) {
+    async function toggleMissionCheck(missionId, username, isChecked) {
       const admin = "{{ chat_room.admin_name }}";
-      const checked = checkbox.checked;
 
       //기존 백엔드 함수 사용
       const res = await fetch("/update_checked", {
@@ -577,7 +577,7 @@
           mission_id: missionId,
           username: username,
           admin: admin,
-          checked: checked
+          checked: isChecked
         })
       });
 
@@ -615,19 +615,24 @@
         // 2️⃣ 체크박스 리스트 갱신
         checklist.innerHTML = ""; // 초기화
         const users = data.users; // 승인된 유저 리스트
-        users.forEach(username => {
-          const checked = checkedUsers.includes(username);
-          const div = document.createElement("div");
-          div.classList.add("user-check");
-          div.innerHTML = `
-            <label>
-              <input type="checkbox" ${checked ? "checked" : ""}
-                    onchange="toggleMissionCheck('${mission._id}', '${username}', this)">
-              ${username}
-            </label>
-          `;
+        users.forEach(u => {
+            const username = u;
+            const checked = mission.checked && mission.checked.includes(username);
 
-          checklist.appendChild(div);
+            const btn = document.createElement("button");
+            btn.classList.add("user-check");
+            btn.innerHTML = (checked ? "✔️ " : "") + username;
+            if (checked) btn.classList.add("checked"); // 이미 체크된 상태 표시
+
+            // 클릭 이벤트
+            btn.addEventListener("click", () => {
+                const isChecked = btn.classList.toggle("checked"); // 클래스 토글
+                btn.innerHTML = (checked ? "✔️ " : "") + username;
+                
+                toggleMissionCheck(mission._id, username, isChecked); // 서버에 체크/체크해제 전송
+            });
+
+          checklist.appendChild(btn);
           
         });
 
