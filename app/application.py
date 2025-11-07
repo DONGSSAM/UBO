@@ -795,6 +795,8 @@ def update_checked():
 
     if not mission_id or not username:
         return jsonify(success=False, message="ID와 유저이름은 필수입니다.")
+    
+    admin_room = f"admin_{admin}"
 
     if checked:
         # 체크 → 추가
@@ -810,7 +812,6 @@ def update_checked():
         )
 
     if result.modified_count > 0:
-        admin_room = f"admin_{admin}"
         socketio.emit(
             "mission_checked_update",       # 이벤트 이름
             {"mission_id": mission_id},     # 필요한 데이터

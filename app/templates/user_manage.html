@@ -233,6 +233,69 @@
     color: red;
     border: 2px solid red;
     }  
+
+
+    /* 미션모달 스타일 */
+    /* 큰 모달 */
+    .large-modal {
+      width: 700px; 
+      max-width: 90vw;
+    }
+
+    /* 모달 바디 */
+    .mission-modal-content {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    /* 미션 내용 */
+    .mission-info {
+      margin-bottom: 10px;
+    }
+
+    /* 체크리스트와 체크한 사람 순서를 좌우로 배치 */
+    .mission-body {
+      display: flex;
+      gap: 20px;
+    }
+
+    /* 왼쪽 체크리스트 */
+    .checklist {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* 체크 버튼 스타일 */
+    .user-check button {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #f0f0f0;
+      font-size: 14px;
+    }
+
+    .user-check button.checked {
+      background-color: #c6f6d5; /* 체크된 상태 색상 */
+      border-color: #68d391;
+    }
+
+    /* 오른쪽 체크한 사람 목록 */
+    .checked-list {
+      flex: 1;
+      border-left: 1px solid #eee;
+      padding-left: 15px;
+    }
+
+    .checked-list ol {
+      padding-left: 20px;
+      margin: 0;
+    }    
   </style>
 </head>
 
@@ -315,6 +378,38 @@
   </div>
 
 
+
+  <div class="modal-overlay" id="modal3" onclick="handleOverlayClick(event, 'modal3')">
+    <div class="modal large-modal">
+      <h3 class="modal-header">과제 정보</h3>
+      <div id="missionModalContent" class="mission-modal-content">
+        <!-- 미션 정보 -->
+        <div class="mission-info">
+          <p>내용: <b id="ui_mission">-</b></p>
+          <p>점수: <span id="ui_reward">0</span>점</p>
+        </div>
+
+        <!-- 체크리스트 + 체크한 사람 순서 -->
+        <div class="mission-body">
+          <!-- 왼쪽: 체크리스트 -->
+          <div class="checklist" id="userChecklist">
+            <!-- 버튼식 체크리스트가 여기 들어감 -->
+          </div>
+
+          <!-- 오른쪽: 체크한 사람 순서 -->
+          <div class="checked-list">
+            <p>체크한 사람:</p>
+            <ol id="checkedUsersList"></ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
+      </div>
+    </div>
+  </div>
+<!--  
   <div class="modal-overlay" id="modal3" onclick="handleOverlayClick(event, 'modal3')">
     <div class="modal">
       <h3 class="modal-header">과제 정보</h3>
@@ -333,6 +428,7 @@
       </div>
     </div>
   </div>
+--> 
   <script>
     // 모달에서 현재 열려 있는 미션 ID를 전역 변수로 저장
     let currentMissionId = null;
@@ -343,19 +439,23 @@
         // 연결 상태 확인
         console.log("Socket connected?", socket.connected);
 
+        //체크 업데이트 시 새로고침
+        socket.on("mission_checked_update", data => {
+          if (currentMissionId === data.mission_id) {
+              refreshCheckedUsersList(currentMissionId);
+          }
+        });
+
         socket.on("connect", () => {
-            console.log("Socket connected! ID:", socket.id);
+            const username = "{{ username }}";
+            console.log("Socket connected! ID:", socket.id, "username:", username);
+            socket.emit("join", { 'room_name': `admin_${username}` });
         });
 
         socket.on("disconnect", () => {
             console.log("Socket disconnected");
         });
-
-        socket.on("mission_checked_update", data => {
-            if (currentMissionId === data.mission_id) {
-                refreshCheckedUsersList(data.mission_id);
-            }
-        });
+        
     })();
 
     async function openUserModal(modal, element) {
@@ -440,6 +540,7 @@
 
         openModal('modal3');
 
+        //모달 열었을 때 체크리스트 표시
         users.forEach(u => {
           const username = u;
           const checked = mission.checked && mission.checked.includes(username);
@@ -525,7 +626,9 @@
               ${username}
             </label>
           `;
+
           checklist.appendChild(div);
+          
         });
 
       } catch (err) {
