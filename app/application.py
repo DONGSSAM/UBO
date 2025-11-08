@@ -874,5 +874,55 @@ def delete_mission():
     else:
         return jsonify({'success': False, 'message': '삭제 실패'})
 
+#체크된 사람 일괄 점수부여 후 미션객체 제거
+@app.route('/give_mission_points', methods=['POST'])
+def give_mission_points():
+    data = request.get_json()
+    room_name = data.get('name')
+    mission_id = data.get('mission_id')
+
+    if not room_name or not mission_id:
+        return jsonify({'success': False, 'message': 'room_name 또는 mission_id 누락'})
+
+    chat_room = chat_rooms.find_one({'name': room_name })
+    if not chat_room:
+        return jsonify({'success': False, 'message': '채팅방을 찾을 수 없음'})
+
+    # 미션 찾기
+    mission = next((m for m in chat_room['missions'] if str(m['_id']) == mission_id), None)
+    if not mission:
+        return jsonify({'success': False, 'message': '미션을 찾을 수 없음'})
+
+    reward = mission.get('reward', 0)
+    checked_users = mission.get('checked', [])
+
+    # 포인트 지급
+    updated_users = []
+    for u in chat_room['users']:
+        if u['username'] in checked_users:
+            u['point'] = u.get('point', 0) + reward
+            updated_users.append(u['username'])#점수 변경할 유저 리스트
+
+    # 1️⃣ 유저 포인트 반영
+    chat_rooms.update_one(
+        {'name': room_name},
+        {'$set': {'users': chat_room['users']}}
+    )
+
+    # 2️⃣ 해당 미션 MongoDB에서 제거
+    chat_rooms.update_one(
+        {'name': room_name},
+        {'$pull': {'missions': {'_id': ObjectId(mission_id)}}}
+    )
+    chat_room = chat_rooms.find_one({'name': room_name})
+    updated_missions = chat_room.get('missions', [])
+
+    return jsonify({
+        'success': True,
+        'message': f"{len(updated_users)}명에게 {reward}점 지급 및 미션 삭제 완료",
+        'updated_users': updated_users,
+        'missions': updated_missions
+    })
+
 if __name__ == "__main__":
     socketio.run(app, host='0.0.0.0', port=5000)

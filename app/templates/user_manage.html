@@ -234,6 +234,11 @@
     border: 2px solid red;
     }  
 
+    .give-point-btn {
+    color: rgb(52, 144, 248);
+    border: 2px solid rgb(0, 113, 241);
+    }
+
 
     /* 미션모달 스타일 */
     /* 큰 모달 */
@@ -420,6 +425,7 @@
       </div>
 
       <div class="modal-footer">
+        <button class="give-point-btn" onclick="givePoints()">점수 지급</button>
         <button class="close-btn" onclick="closeModal('modal3')">닫기</button>
       </div>
     </div>
@@ -590,6 +596,28 @@
       refreshCheckedUsersList(missionId);
     }
 
+    function givePoints() {
+      fetch('/give_mission_points', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          name: "{{ username }}",
+          mission_id: currentMissionId
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          loadUsers();
+          renderMissions(data.missions);
+          closeModal('modal3');
+          alert(data.message);
+        } else {
+          alert("오류: " + data.message);
+        }
+      });
+    }
+
     async function refreshCheckedUsersList(missionId) {
       try {
         const res = await fetch(`/get_mission_detail/${missionId}`);
@@ -640,6 +668,23 @@
         console.error("체크리스트 갱신 실패:", err);
       }
     }
+
+    function renderMissions(missions) {
+      const missionList = document.querySelector('.mission-list ul');
+      missionList.innerHTML = '';
+
+      if (missions && missions.length > 0) {
+        missions.forEach(m => {
+          const li = document.createElement('li');
+          li.className = 'mission-info';
+          li.innerHTML = `<b>내용:</b> ${m.content}<br><b>점수:</b> ${m.reward}`;
+          li.onclick = () => openMissionModal(m._id);
+          missionList.appendChild(li);
+        });
+      } else {
+        missionList.innerHTML = '<p>아직 과제가 없습니다.</p>';
+      }
+    }    
 
     function openModal(id) {
       document.getElementById(id).style.display = "flex";
