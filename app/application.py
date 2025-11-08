@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, Response, url_for, redirect, 
 from datetime import datetime
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import sys, bcrypt, qrcode, random, os
-from .db import users, check_connection,  chat_rooms, fs
+from db import users, check_connection,  chat_rooms, fs
 from bson.objectid import ObjectId
 
 app = Flask(__name__)
