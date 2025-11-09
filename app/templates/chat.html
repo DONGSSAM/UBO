@@ -1053,6 +1053,19 @@
             					this.emitMessage("칭찬맨", result.message);  // 실패 메시지 출력
         						}
                     		}
+                            
+                        else if(this.messageToSend === "!사용법") {
+                            const usage = `
+                            사용법 안내:
+                            채팅창에 아래 글자를 적어서 보내보세요!
+                            !던져 - 포인트를 사용해 내 캐릭터를 뽑습니다.
+                            !전달 이름 숫자 - 다른 사용자에게 포인트 전달 (홍길동에게 500점 전달)
+                            예시) !전달 홍길동 500
+                            !사용법 - 사용법 안내 메시지
+                                `.replace(/\n/g, "<br>");
+                            this.emitMessage("칭찬맨", usage);
+                            }
+                                                        
                     	else {
                             this.emitMessage("칭찬맨", "그건 알 수 없는 말이야.")
                         	}
