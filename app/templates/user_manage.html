@@ -264,7 +264,6 @@
       display: flex;
       flex-direction: row;
       gap: 20px;
-      height: 70vh;
       position: relative;
       flex: 1;
     }
@@ -280,6 +279,29 @@
       overflow-y: auto;      /* 내용이 많을 때 스크롤 */
       max-height: 100%;
     }
+
+    @media (max-width: 768px) {  /* 태블릿 / 모바일 대응 */
+      .mission-body {
+        flex-direction: column; /* row → column */
+        gap: 10px;
+      }
+
+      #userChecklist {
+        max-height: 50vh;
+        overflow-y: auto;       
+      }
+      
+      .checked-list {
+        position: static;     /* absolute 해제 */
+        max-height: 30vh;
+        overflow-y: auto;
+        width: 100%;          /* 모바일에서는 전체 폭 사용 */
+        border-left: none;    /* 필요하면 제거 */
+        padding-left: 0;
+      }      
+
+    }
+
     #userChecklist .user-check {  /* div.user-check */
       display: inline-flex;        /* 버튼을 가로로 유지 */
     }
