@@ -1,3 +1,5 @@
+from gevent import monkey
+monkey.patch_all()
 from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify, send_file
 from datetime import datetime
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -6,7 +8,7 @@ from db import users, check_connection,  chat_rooms, fs
 from bson.objectid import ObjectId
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
 
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 102 # 500MB제한
 app.config['SECRET_KEY'] = "your-very-secret-key"
@@ -932,4 +934,5 @@ def give_mission_points():
     })
 
 if __name__ == "__main__":
-    socketio.run(app, host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
