@@ -252,6 +252,7 @@
       display: flex;
       flex-direction: column;
       gap: 15px;
+
     }
 
     /* 미션 내용 */
@@ -264,8 +265,9 @@
       display: flex;
       flex-direction: row;
       gap: 20px;
-      position: relative;
       flex: 1;
+      height:70vh;
+      position: relative;
     }
 
     /* 왼쪽 체크리스트 */
@@ -275,31 +277,40 @@
       display: flex;          /* 버튼들을 가로로 배치 */
       flex-wrap: wrap;        /* 공간 부족하면 다음 줄로 자동 줄바꿈 */
       gap: 8px;               /* 버튼 사이 간격 */
-      flex: 1;             /* 왼쪽 영역 남은 공간 차지 */
+      flex: 3;             /* 왼쪽 영역 남은 공간 차지 */
       overflow-y: auto;      /* 내용이 많을 때 스크롤 */
       max-height: 100%;
     }
 
-    @media (max-width: 768px) {  /* 태블릿 / 모바일 대응 */
+    .checked-list {
+      right: 0;             /* 오른쪽 끝 고정 */
+      border-left: 1px solid #eee;
+      padding-left: 15px;
+      flex: 1;
+      max-height: 100%;
+    }
+
+    .checked-list ol {
+      padding-left: 20px;
+      margin: 0;
+    }        
+    @media (max-width: 1300px) {
       .mission-body {
-        flex-direction: column; /* row → column */
+        display: flex;
+        flex-direction: column; /* 세로로 쌓기 */
         gap: 10px;
+        flex: 1;
+        height: auto;           /* 부모 높이 지정 */
       }
 
-      #userChecklist {
-        max-height: 50vh;
-        overflow-y: auto;       
-      }
-      
-      .checked-list {
-        position: static;     /* absolute 해제 */
-        max-height: 30vh;
+      #userChecklist, .checked-list {
+        width: 100%;
+        max-height: 20vh;
         overflow-y: auto;
-        width: 100%;          /* 모바일에서는 전체 폭 사용 */
-        border-left: none;    /* 필요하면 제거 */
         padding-left: 0;
-      }      
-
+        border-left: none;
+        flex: none;  
+      }
     }
 
     #userChecklist .user-check {  /* div.user-check */
@@ -328,19 +339,7 @@
       border-color: #99bff8;
     }
     /* 오른쪽 체크한 사람 목록 */
-    .checked-list {
-      position: absolute;
-      right: 0;             /* 오른쪽 끝 고정 */
-      width: 25%;          /* 원하는 고정 너비 */
-      border-left: 1px solid #eee;
-      padding-left: 15px;
-      flex: none;
-    }
 
-    .checked-list ol {
-      padding-left: 20px;
-      margin: 0;
-    }    
   </style>
 </head>
 

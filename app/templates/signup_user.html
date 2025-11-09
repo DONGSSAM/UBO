@@ -67,7 +67,7 @@
       position: relative;
     }
 
-    #username-msg {
+    #username-msg, #admin-msg {
       position: absolute;
       left: 0;
       top: 38px; /* 입력칸 높이에 맞게 조정 (예: 38px) */
@@ -87,6 +87,10 @@
       z-index: 1;
     }
 
+    #signupBtn {
+      margin-top: 10px;
+    }
+    
     #signupBtn:disabled {
       background: #ccc;
       cursor: not-allowed;
@@ -103,12 +107,54 @@
         <span id="username-msg"></span>
       </div>
       <input type="text" id="password" name="password" placeholder="비밀번호">
-      <input type="text" id="admin" name="admin" placeholder="선생님ID">
+      <div class="name-box">
+        <input type="text" id="admin" name="admin" placeholder="선생님ID">
+        <span id="admin-msg"></span>
+      </div>
       <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
     </form>
 	</div>
 
 <script>
+  const signupBtn = document.getElementById('signupBtn'); // 기존 버튼
+
+  document.getElementById('admin').addEventListener('input', function() {
+    const adminName = this.value.trim();
+    const msgSpan = document.getElementById('admin-msg');
+
+    if (!adminName) {
+      msgSpan.textContent = '';
+      signupBtn.disabled = true; // admin 입력 없으면 가입 불가
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('admin', adminName);
+
+    fetch('/check_admin', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.exists) {
+        msgSpan.textContent = '가입 가능한 선생님';
+        msgSpan.style.color = 'green';
+        signupBtn.disabled = false; // username도 유효해야지만 enable
+      } else {
+        msgSpan.textContent = '존재하지 않는 선생님';
+        msgSpan.style.color = 'red';
+        signupBtn.disabled = true;
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      msgSpan.textContent = '서버 오류';
+      msgSpan.style.color = 'red';
+      signupBtn.disabled = true;
+    });
+  });
+
   document.getElementById('username').addEventListener('input', function() {
     const username = this.value;
     const msgSpan = document.getElementById('username-msg');

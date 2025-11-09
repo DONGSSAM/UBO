@@ -119,6 +119,13 @@ def register_user():
 #유저 관련 코드
 
 #아이디가 중복되는지 확인하는 코드
+@app.route('/check_admin', methods=['POST'])
+def check_admin():
+    admin_name = request.form.get('admin')
+    # chat_rooms 컬렉션에서 이름 존재 여부 확인
+    exists = chat_rooms.find_one({'name': admin_name}) is not None
+    return jsonify({'exists': exists})
+
 @app.route("/check_username", methods=["POST"])
 def check_username():
     username = request.form["username"]

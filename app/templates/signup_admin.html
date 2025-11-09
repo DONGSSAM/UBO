@@ -63,6 +63,10 @@
       background: #0056b3;
     }	  
     
+    #signupBtn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }    
       
   </style>
 </head>        
@@ -73,11 +77,25 @@
     <input type="hidden" name="role" value="admin">
   	<input type="text" id="id" name="username" placeholder="아이디">
   	<input type="text" id="pw" name="password" placeholder="비밀번호">
-    <button type="button" onclick="submitSignup()">회원가입</button>
+    <input type="text" id="admin_code" name="admin_code" placeholder="관리자 코드">
+    <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
     </form>
 	</div>
 
 <script>
+  const ADMIN_CODE = "12345"; // 원하는 코드로 바꾸세요
+
+  const adminInput = document.getElementById("admin_code");
+  const signupBtn = document.getElementById("signupBtn");
+
+  adminInput.addEventListener("input", function() {
+    if (this.value === ADMIN_CODE) {
+      signupBtn.disabled = false;  // 코드 맞으면 버튼 활성화
+    } else {
+      signupBtn.disabled = true;   // 코드 틀리면 버튼 비활성화
+    }
+  });
+
   function submitSignup() {
     const form = document.getElementById('signupForm');
     const formData = new FormData(form);
