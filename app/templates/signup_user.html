@@ -64,10 +64,11 @@
     }	  
     
     .name-box {
+      margin-top: 5px;
       position: relative;
     }
 
-    #username-msg, #admin-msg {
+    #username-msg, #admin-msg, #password-msg {
       position: absolute;
       left: 0;
       top: 38px; /* 입력칸 높이에 맞게 조정 (예: 38px) */
@@ -106,10 +107,17 @@
         <input type="text" id="username" name="username" placeholder="아이디(2글자 이상)">
         <span id="username-msg"></span>
       </div>
-      <input type="text" id="password" name="password" placeholder="비밀번호">
+      <div class="name-box">    
+        <input type="text" id="password" name="password" placeholder="비밀번호">
+        <span id="password-msg"></span>
+      </div>
       <div class="name-box">
         <input type="text" id="admin" name="admin" placeholder="선생님ID">
         <span id="admin-msg"></span>
+        <label>
+          <input type="checkbox" id="check_term"> 
+          이용약관 및 ID를 포함한 개인정보 수집에 동의합니다.
+        </label>        
       </div>
       <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
     </form>
@@ -117,6 +125,40 @@
 
 <script>
   const signupBtn = document.getElementById('signupBtn'); // 기존 버튼
+
+  const termCheckbox = document.getElementById("check_term");
+  const adminInput = document.getElementById("admin");
+  const usernameInput = document.getElementById("username");
+  const passwordInput = document.getElementById("password");
+
+  function validateForm() {
+    const adminValid = adminInput.value.trim() !== '';
+    const usernameValid = usernameInput.value.trim().length >= 2;
+    const passwordValid = /^[0-9]{6,}$/.test(passwordInput.value.trim());
+    const termValid = termCheckbox.checked;
+
+    signupBtn.disabled = !(adminValid && termValid && passwordValid && usernameValid);  
+  }
+
+  // ✅ 약관 체크 이벤트
+  termCheckbox.addEventListener("change", function() {
+    termsChecked = this.checked;
+    validateForm();
+  });
+
+  passwordInput.addEventListener("input", function() {
+    const msgSpan = document.getElementById('password-msg');
+    const pwValue = this.value.trim();
+    if (!/^[0-9]{6,}$/.test(pwValue)) {
+      msgSpan.textContent = '비밀번호는 숫자 6자리 이상이어야 합니다.';
+      msgSpan.style.color = 'red';
+    } else {
+      msgSpan.textContent = '사용 가능한 비밀번호';
+      msgSpan.style.color = 'green';
+    }
+    validateForm();
+  });
+
 
   document.getElementById('admin').addEventListener('input', function() {
     const adminName = this.value.trim();
@@ -140,7 +182,7 @@
       if (data.exists) {
         msgSpan.textContent = '가입 가능한 선생님';
         msgSpan.style.color = 'green';
-        signupBtn.disabled = false; // username도 유효해야지만 enable
+        validateForm();
       } else {
         msgSpan.textContent = '존재하지 않는 선생님';
         msgSpan.style.color = 'red';
@@ -178,8 +220,8 @@
         msgSpan.style.color = 'red';
       } else {
         msgSpan.textContent = '사용 가능한 아이디';
-         msgSpan.style.color = 'green';
-        signupBtn.disabled = false;
+        msgSpan.style.color = 'green';
+        validateForm();
       }
     });
   });

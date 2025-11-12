@@ -67,6 +67,28 @@
       background: #ccc;
       cursor: not-allowed;
     }    
+    .name-box {
+      margin-top: 5px;
+      margin-bottom: 2px;
+      position: relative;
+    }
+
+    #username-msg, #password-msg {
+      position: absolute;
+      left: 0;
+      top: 38px; /* 입력칸 높이에 맞게 조정 (예: 38px) */
+      color: red;
+      font-size: 13px;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      z-index: 2;
+      width: 100%;
+      pointer-events: none;
+    }  
+    #admin_code {
+      margin-top: 5px;
+    }
       
   </style>
 </head>        
@@ -75,25 +97,91 @@
     <h2>우리반 보약 관리자 회원가입</h2>	
     <form id="signupForm">
     <input type="hidden" name="role" value="admin">
-  	<input type="text" id="id" name="username" placeholder="아이디">
-  	<input type="text" id="pw" name="password" placeholder="비밀번호">
+      <div class="name-box">
+        <input type="text" id="id" name="username" placeholder="아이디(2글자 이상)">
+        <span id="username-msg"></span>
+      </div>
+    <div class="name-box">    
+      <input type="text" id="pw" name="password" placeholder="비밀번호">
+      <span id="password-msg"></span>
+    </div>
     <input type="text" id="admin_code" name="admin_code" placeholder="관리자 코드">
+    <label>
+      <input type="checkbox" id="check_term"> 
+      이용약관: 채팅창 도배하지 않기, 채팅 예쁘게 치기<br>
+      이용약관 및 ID를 포함한 개인정보 수집에 동의합니다.
+    </label>
     <button type="button" id="signupBtn" onclick="submitSignup()" disabled>회원가입</button>
     </form>
 	</div>
 
 <script>
   const ADMIN_CODE = "12345"; // 원하는 코드로 바꾸세요
-
-  const adminInput = document.getElementById("admin_code");
   const signupBtn = document.getElementById("signupBtn");
 
-  adminInput.addEventListener("input", function() {
-    if (this.value === ADMIN_CODE) {
-      signupBtn.disabled = false;  // 코드 맞으면 버튼 활성화
+  const adminInput = document.getElementById("admin_code");
+  const usernameInput = document.getElementById("id");
+  const termCheckbox = document.getElementById("check_term");
+  const passwordInput = document.getElementById("pw");
+
+// ✅ 폼 검증 함수
+  function validateForm() {
+    const adminValid = adminInput.value.trim() === ADMIN_CODE;
+    const termValid = termCheckbox.checked;
+    const pwValue = passwordInput.value.trim();
+    const pwValid = /^[0-9]{6,}$/.test(pwValue);
+    const usernameValid = usernameInput.value.trim() !== ''; 
+
+    // 세 조건이 모두 만족할 때만 버튼 활성화
+    signupBtn.disabled = !(adminValid && termValid && pwValid && usernameValid);
+  }
+  
+  termCheckbox.addEventListener("change", function() {
+    termsChecked = this.checked;
+    validateForm();
+  });
+
+  passwordInput.addEventListener("input", function() {
+    const msgSpan = document.getElementById('password-msg');
+    const pwValue = this.value.trim();
+    if (!/^[0-9]{6,}$/.test(pwValue)) {
+      msgSpan.textContent = '비밀번호는 숫자 6자리 이상이어야 합니다.';
+      msgSpan.style.color = 'red';
     } else {
-      signupBtn.disabled = true;   // 코드 틀리면 버튼 비활성화
+      msgSpan.textContent = '사용 가능한 비밀번호';
+      msgSpan.style.color = 'green';
     }
+    validateForm();
+  });
+
+
+  document.getElementById('id').addEventListener('input', function() {
+    const username = this.value;
+    const msgSpan = document.getElementById('username-msg');
+    if (username.length < 2) {
+      msgSpan.textContent = '2글자 이상 입력해주세요.';
+      msgSpan.style.color = 'red';
+      signupBtn.disabled = true;
+      return;
+    }
+    const formData = new FormData();
+    formData.append('username', username);
+
+    fetch('/check_username', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.exists) {
+        msgSpan.textContent = '중복되는 아이디';
+        msgSpan.style.color = 'red';
+      } else {
+        msgSpan.textContent = '사용 가능한 아이디';
+         msgSpan.style.color = 'green';
+        validateForm();
+      }
+    });
   });
 
   function submitSignup() {

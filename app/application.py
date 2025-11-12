@@ -60,9 +60,6 @@ def register_admin():
     password = request.form["password"]
     role = request.form.get("role")
 
-    if users.find_one({"username": username}):
-        return jsonify(success=False, message="이미 존재하는 아이디입니다.")    
-
     hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
     users.insert_one({
