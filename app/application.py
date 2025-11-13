@@ -92,6 +92,9 @@ def register_user():
     if users.find_one({"username": username}):
         return jsonify(success=False)    
 
+    if not chat_rooms.find_one({"name": admin}):
+        return jsonify(success=False)
+
     hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
     users.insert_one({

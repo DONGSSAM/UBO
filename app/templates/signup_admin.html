@@ -130,14 +130,13 @@
     const termValid = termCheckbox.checked;
     const pwValue = passwordInput.value.trim();
     const pwValid = /^[0-9]{6,}$/.test(pwValue);
-    const usernameValid = usernameInput.value.trim() !== ''; 
+    const usernameValid = usernameInput.value.trim().length >= 2; //빈칸이 아니면 true
 
     // 세 조건이 모두 만족할 때만 버튼 활성화
     signupBtn.disabled = !(adminValid && termValid && pwValid && usernameValid);
   }
   
   termCheckbox.addEventListener("change", function() {
-    termsChecked = this.checked;
     validateForm();
   });
 
@@ -161,7 +160,7 @@
     if (username.length < 2) {
       msgSpan.textContent = '2글자 이상 입력해주세요.';
       msgSpan.style.color = 'red';
-      signupBtn.disabled = true;
+      validateForm();//버튼만 안보이게 함
       return;
     }
     const formData = new FormData();
@@ -179,26 +178,30 @@
       } else {
         msgSpan.textContent = '사용 가능한 아이디';
          msgSpan.style.color = 'green';
-        validateForm();
       }
+      validateForm();//버튼만 안보이게 함
     });
   });
 
+  document.getElementById('admin_code').addEventListener('input', function() {
+    validateForm();
+  });
   function submitSignup() {
     const form = document.getElementById('signupForm');
     const formData = new FormData(form);
-    
+    if (adminInput.value.trim() !== ADMIN_CODE) {
+      return;
+    }
     fetch('/signup_admindata', {
       method: 'POST',
       body: formData
     })
     .then(response => response.json())
     .then(data => {
+      //데이터가 false면 가입 못하게 막음 엔터이벤트로 전송은 해도 false가 반환
       if (data.success) {
         alert('회원가입 성공!');
         window.location.href = data.redirect; // 로그인 페이지로 리다이렉트
-      } else {
-        alert(data.message); // 에러 메시지 표시
       }
     })
     .catch(error => console.error('Error:', error));

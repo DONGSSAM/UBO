@@ -124,25 +124,23 @@
 	</div>
 
 <script>
-  const signupBtn = document.getElementById('signupBtn'); // 기존 버튼
+  let adminExists = false;
 
+  const signupBtn = document.getElementById('signupBtn'); // 기존 버튼
   const termCheckbox = document.getElementById("check_term");
-  const adminInput = document.getElementById("admin");
   const usernameInput = document.getElementById("username");
   const passwordInput = document.getElementById("password");
 
   function validateForm() {
-    const adminValid = adminInput.value.trim() !== '';
     const usernameValid = usernameInput.value.trim().length >= 2;
     const passwordValid = /^[0-9]{6,}$/.test(passwordInput.value.trim());
     const termValid = termCheckbox.checked;
 
-    signupBtn.disabled = !(adminValid && termValid && passwordValid && usernameValid);  
+    signupBtn.disabled = !(adminExists && termValid && passwordValid && usernameValid);  
   }
 
   // ✅ 약관 체크 이벤트
   termCheckbox.addEventListener("change", function() {
-    termsChecked = this.checked;
     validateForm();
   });
 
@@ -182,18 +180,20 @@
       if (data.exists) {
         msgSpan.textContent = '가입 가능한 선생님';
         msgSpan.style.color = 'green';
-        validateForm();
+        adminExists = true;
       } else {
         msgSpan.textContent = '존재하지 않는 선생님';
         msgSpan.style.color = 'red';
-        signupBtn.disabled = true;
+        adminExists = false;
       }
+      validateForm();
     })
     .catch(err => {
       console.error(err);
       msgSpan.textContent = '서버 오류';
       msgSpan.style.color = 'red';
-      signupBtn.disabled = true;
+      adminExists = false;
+      validateForm();
     });
   });
 
@@ -203,7 +203,7 @@
     if (username.length < 2) {
       msgSpan.textContent = '2글자 이상 입력해주세요.';
       msgSpan.style.color = 'red';
-      signupBtn.disabled = true;
+      validateForm();
       return;
     }
     const formData = new FormData();
@@ -221,8 +221,8 @@
       } else {
         msgSpan.textContent = '사용 가능한 아이디';
         msgSpan.style.color = 'green';
-        validateForm();
       }
+      validateForm();
     });
   });
   
