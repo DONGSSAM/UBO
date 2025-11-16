@@ -4,12 +4,15 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import sys, bcrypt, qrcode, random, os
 from db import users, check_connection,  chat_rooms, fs
 from bson.objectid import ObjectId
+from modules.project_learning import project_learning_bp
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 102 # 500MB제한
 app.config['SECRET_KEY'] = "your-very-secret-key"
+
+app.register_blueprint(project_learning_bp)
 
 # 계정관련 코드
 

@@ -16,7 +16,7 @@ async function generate() {
     const title = document.getElementById('title').value;
     if(!title) return alert('주제를 입력하세요.');
 
-    const response = await fetch('/generate', {
+    const response = await fetch('/project-learning/generate', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({title})
