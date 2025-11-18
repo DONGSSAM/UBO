@@ -2,7 +2,9 @@ import os
 from flask import request, jsonify, render_template, Blueprint
 import requests, json
 from dotenv import load_dotenv
+from pathlib import Path
 
+dotenv_path = Path(__file__).parent / ".env" 
 load_dotenv()
 
 project_learning_bp = Blueprint('project_learning', __name__, template_folder='templates', url_prefix="/project-learning")
@@ -38,11 +40,6 @@ SYSTEM_PROMPT_TEMPLATE = """
  3) sections 배열의 각 title은 {resources}에 있는 항목 순서대로 생성.
  4) {resources} 항목이 3개보다 적으면, 자동으로 3개까지 추가.
 """
-
-
-@project_learning_bp.route('/')
-def index():
-    return render_template('project_learning.html')
 
 @project_learning_bp.route('/generate', methods=['POST'])
 def generate():
@@ -83,3 +80,21 @@ def generate():
         return jsonify(resp.json())
     except requests.RequestException as e:
         return jsonify({'error': str(e)}), 500
+
+rooms = []
+
+@project_learning_bp.route('/rooms', methods=['GET'])
+def get_rooms():
+    return jsonify(rooms)
+
+@project_learning_bp.route('/rooms', methods=['POST'])
+def create_room():
+    data = request.json
+    new_room = {
+        "id": str(len(rooms) + 1),
+        "topic": data.get("topic"),
+        "createdAt": str(data.get("createdAt", "")),
+        "memberCount": 1
+    }
+    rooms.append(new_room)
+    return jsonify(new_room)
