@@ -2,6 +2,7 @@ from gevent import monkey
 monkey.patch_all()
 from flask import Flask, render_template, request, Response, url_for, redirect, session, jsonify, send_file
 from datetime import datetime
+from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import sys, bcrypt, qrcode, random, os
 from db import users, check_connection,  chat_rooms, fs
@@ -9,6 +10,7 @@ from bson.objectid import ObjectId
 from modules.project_learning import project_learning_bp
 
 app = Flask(__name__)
+CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 102 # 500MB제한

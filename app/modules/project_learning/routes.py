@@ -41,46 +41,6 @@ SYSTEM_PROMPT_TEMPLATE = """
  4) {resources} 항목이 3개보다 적으면, 자동으로 3개까지 추가.
 """
 
-@project_learning_bp.route('/generate', methods=['POST'])
-def generate():
-    data = request.json
-    title = data.get('title', '').strip()
-    roles = data.get('roles', '').strip()
-    schedule = data.get('schedule', '').strip()
-    methods = data.get('methods', '').strip()
-    resources = data.get('resources', [])
-
-    system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
-        title=title,
-        roles=roles,
-        schedule=schedule,
-        methods=methods,
-        resources=json.dumps(resources)
-    )
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"프로젝트 학습 '{title}'를 시작해 주세요."}
-    ]
-
-    payload = {
-        "messages": messages,
-        "maxTokens": 1000,
-        "temperature": 0.5
-    }
-
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        resp = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
-        return jsonify(resp.json())
-    except requests.RequestException as e:
-        return jsonify({'error': str(e)}), 500
-
 rooms = []
 
 @project_learning_bp.route('/rooms', methods=['GET'])
@@ -90,11 +50,48 @@ def get_rooms():
 @project_learning_bp.route('/rooms', methods=['POST'])
 def create_room():
     data = request.json
+    topic = data.get("topic")
+
+    # 1. 방 생성
     new_room = {
         "id": str(len(rooms) + 1),
-        "topic": data.get("topic"),
+        "topic": topic,
         "createdAt": str(data.get("createdAt", "")),
         "memberCount": 1
     }
     rooms.append(new_room)
-    return jsonify(new_room)
+
+    # 2. /generate 호출 (AI 결과)
+    system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+        title=topic,
+        roles="",
+        schedule="",
+        methods="",
+        resources=json.dumps([])
+    )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"프로젝트 학습 '{topic}'를 시작해 주세요."}
+    ]
+    payload = {
+        "messages": messages,
+        "maxTokens": 1000,
+        "temperature": 0.5
+    }
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        resp = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+        resp.raise_for_status()
+        ai_result = resp.json()
+    except requests.RequestException as e:
+        ai_result = {"error": str(e)}
+
+    # 3. 방 정보 + AI 결과 반환
+    return jsonify({
+        "room": new_room,
+        "ai_result": ai_result
+    })

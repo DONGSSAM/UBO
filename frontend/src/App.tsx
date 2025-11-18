@@ -4,13 +4,7 @@ import { ProjectModal } from '@/components/ProjectModal'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus, BookOpen } from 'lucide-react'
-
-interface Room {
-  id: string
-  topic: string
-  createdAt: string // 서버에서 ISO 문자열로 받는다고 가정
-  memberCount: number
-}
+import { Room } from '@/types'
 
 export default function App() {
   const [rooms, setRooms] = useState<Room[]>([])
@@ -37,12 +31,14 @@ export default function App() {
       body: JSON.stringify({ topic: newTopic }),
     })
       .then((res) => res.json())
-      .then((newRoom) => {
-        setRooms([...rooms, newRoom])
+      .then((data) => {
+      // data.room : 방 정보
+      // data.ai_result : AI 결과
+        setRooms([...rooms, { ...data.room, ai_result: data.ai_result }])
         setNewTopic('')
       })
-      .catch((err) => console.error('Failed to create room:', err))
-  }
+      .catch(err => console.error('Failed to create room:', err))
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
