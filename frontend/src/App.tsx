@@ -9,16 +9,16 @@ import { Room } from '@/types'
 export default function App() {
 
    //상태값과 함수 적용해서 그 상태값을 동적으로 바꿈 useState사용해서, 상태값이 바뀌면 자동 랜더링
-  const [rooms, setRooms] = useState<Room[]>([])
+  const [rooms, setRooms] = useState<Room[]>([])//방 목록을 초기에 받아서 여기에 상태값으로 저장함
   const [newTopic, setNewTopic] = useState('')
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)//초기값 null 클릭 시 조건부 랜더링 projectModal 컴포넌트 보여줌
 
   // 환경 변수에서 API URL 가져오기
   const API_URL = import.meta.env.VITE_API_URL
 
   // 페이지 로드 시 방 목록 가져오기 useEffect 컴포넌트생명주기에 따라 읽어오기 함 [] - 처음 시작할 때 한 번만 실행 [값] - 값이 바뀔 때마다 실행
   useEffect(() => {
-    fetch(`${API_URL}/rooms`)
+    fetch(`${API_URL}/rooms`)//백엔드 모듈 url에서 방 목록 가져오기
       .then((res) => res.json())
       .then((data) => setRooms(data))
       .catch((err) => console.error('Failed to fetch rooms:', err))
@@ -37,6 +37,7 @@ export default function App() {
       .then((data) => {
       // data.room : 방 정보
       // data.ai_result : AI 결과
+        //방 생성 요청 후 받은 방 정보 룸정보딕셔너리 + ai json 데이터, rooms 배열에 추가함
         setRooms([...rooms, { ...data.room, ai_result: data.ai_result }])
         setNewTopic('')
       })
@@ -94,7 +95,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Project Modal */}
+      {/* Project Modal selectedRoom값에 따라 동적으로 해당 구문 실행 컴포넌트 랜더링 모달이랑 다름*/}
       {selectedRoom && (
         <ProjectModal
           room={selectedRoom}

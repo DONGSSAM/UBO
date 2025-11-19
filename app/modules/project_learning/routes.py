@@ -50,11 +50,12 @@ def get_rooms():
 @project_learning_bp.route('/rooms', methods=['POST'])
 def create_room():
     data = request.json
+    #프론트에서 newTopic으로 주제 보냄
     topic = data.get("topic")
 
     # 1. 방 생성
     new_room = {
-        "id": str(len(rooms) + 1),
+        "id": len(rooms) + 1,
         "topic": topic,
         "createdAt": str(data.get("createdAt", "")),
         "memberCount": 1
@@ -75,7 +76,7 @@ def create_room():
     ]
     payload = {
         "messages": messages,
-        "maxTokens": 1000,
+        "maxTokens": 1500,
         "temperature": 0.5
     }
     headers = {
