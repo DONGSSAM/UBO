@@ -7,13 +7,16 @@ import { Plus, BookOpen } from 'lucide-react'
 import { Room } from '@/types'
 
 export default function App() {
+
+   //상태값과 함수 적용해서 그 상태값을 동적으로 바꿈 useState사용해서, 상태값이 바뀌면 자동 랜더링
   const [rooms, setRooms] = useState<Room[]>([])
   const [newTopic, setNewTopic] = useState('')
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
 
+  // 환경 변수에서 API URL 가져오기
   const API_URL = import.meta.env.VITE_API_URL
 
-  // 페이지 로드 시 방 목록 가져오기
+  // 페이지 로드 시 방 목록 가져오기 useEffect 컴포넌트생명주기에 따라 읽어오기 함 [] - 처음 시작할 때 한 번만 실행 [값] - 값이 바뀔 때마다 실행
   useEffect(() => {
     fetch(`${API_URL}/rooms`)
       .then((res) => res.json())
