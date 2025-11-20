@@ -8,6 +8,7 @@ import sys, bcrypt, qrcode, random, os
 from db import users, check_connection,  chat_rooms, fs
 from bson.objectid import ObjectId
 from modules.project_learning import project_learning_bp
+from pymongo.errors import DuplicateKeyError
 
 app = Flask(__name__)
 CORS(app)
@@ -17,6 +18,7 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 102 # 500MB제한
 app.config['SECRET_KEY'] = "your-very-secret-key"
 
 app.register_blueprint(project_learning_bp)
+# users.create_index("username", unique=True)
 
 # 계정관련 코드
 
@@ -41,6 +43,7 @@ def login():
             room_name = room.get("room_name")
             chat_room = chat_rooms.find_one({"admin_name": room_name})
             if chat_room:
+                # 이름 부합하는 사용자 순서대로 찾아서 인포에 넣음
                 user_info = next((u for u in chat_room.get("users", []) if u.get("username") == username), None)
                 if user_info and not user_info.get("approved", False):
                     approved = False
@@ -68,7 +71,7 @@ def register_admin():
     role = request.form.get("role")
 
     hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-
+    #try: 나중에 테스트 끝나면 중복체크 적용하기
     users.insert_one({
         "username": username,
         "password": hashed_pw,
@@ -86,7 +89,8 @@ def register_admin():
             "rules": [],
             "missions": []
         })
-
+    #except DuplicateKeyError:
+    #    return jsonify(success=False)
     return jsonify(success=True, redirect=url_for("logIn"))
 
 @app.route("/signup_userdata", methods=["POST"])
@@ -103,7 +107,7 @@ def register_user():
         return jsonify(success=False)
 
     hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-
+    #try:
     users.insert_one({
         "username": username,
         "password": hashed_pw,
@@ -121,6 +125,8 @@ def register_user():
         {"admin_name": admin},
         {"$push": {"users": {"username": username, "point": 500, "approved": False}}}
     )
+    #except DuplicateKeyError:
+        #return jsonify(success=False)
     return jsonify(success=True, redirect=url_for("logIn"))
 
 #유저 관련 코드
