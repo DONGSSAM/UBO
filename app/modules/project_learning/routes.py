@@ -20,14 +20,14 @@ SYSTEM_PROMPT_TEMPLATE = """
 
 다음은 해당 프로젝트에 대한 구체적인 설명.
 - 주제: "{title}"
-- 발표 방법: "{methods}"  (예: 포스터 만들기, 발표하기, 자료집 만들기 등)
-- 필요 자료: "{resources}" (예: 기본 정보, 문화, 음식 등)
+- 발표 방법: "{methods}"  
+- 조사할 자료: "{resources}" 
 
 {{ "title": "{title}",
 
 "sections": [
-  {{ "title": "<주제1>", 
-  "content": "<주제1>에 관한 내용 포함>", 
+  {{ "title": "자료 제목", 
+  "content": "내용 작성>", 
   "references": ["<출처 URL>"] 
   }}
 ],
@@ -35,7 +35,8 @@ SYSTEM_PROMPT_TEMPLATE = """
 }} 
 
 규칙: 
- 1) sections의 content는 3~4문장.
+ 1) 1) sections의 content는 3~4문장으로 작성하되,
+    문장 스타일은 발표 방법(포스터/발표/자료집 등)의 특징에 맞게 조정한다.
  2) references는 신뢰 가능한 1~2개 URL만 사용.
  3) sections 배열의 각 title은 {resources}에 있는 항목 순서대로 생성.
  4) {resources} 항목이 3개보다 적으면, 자동으로 3개까지 추가.
